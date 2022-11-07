@@ -1,8 +1,8 @@
 ;====================================================================================================
 ;
 ;   Filename:	RocketServo.asm
-;   Date:	8/31/2022
-;   File Version:	1.0b1
+;   Date:	11/7/2022
+;   File Version:	1.0b2
 ;
 ;    Author:	David M. Flynn
 ;    Company:	Oxford V.U.E., Inc.
@@ -13,7 +13,7 @@
 ;    RC Servo Activator for high power rocketry uses PIC12F1822
 ;
 ;    History:
-;
+; 1.0b2   11/7/2022	Inverted CmdInputBit to active low
 ; 1.0b1   8/31/2022    Copied from SM_Ctrl_RC_Servo.
 ;
 ;====================================================================================================
@@ -49,7 +49,7 @@
 ;  Pin 1 VDD (+5V)		+5V
 ;  Pin 2 RA5		CCP1
 ;  Pin 3 RA4		System LED Active Low/SW2 Dec switch Active Low
-;  Pin 4 RA3/MCLR*/Vpp (Input only)	Command = Active High
+;  Pin 4 RA3/MCLR*/Vpp (Input only)	Command = Active Low
 ;  Pin 5 RA2		LED 2 Active Low/SW1 Inc switch Active Low
 ;  Pin 6 RA1/ICSPCLK		n/c
 ;  Pin 7 RA0/ICSPDAT		n/c
@@ -567,7 +567,7 @@ ML_Btns_End:
 	bra	Set_Dest_End	; No
 	bcf	NewSWData
 ;
-	btfss	CmdInputBit	;Contorl signal active?
+	btfsc	CmdInputBit	;Contorl signal active?
 	bra	ML_CmdNormal	; No
 ; debounce, don't change until we've seen the input 5 times
 	movlw	0x05

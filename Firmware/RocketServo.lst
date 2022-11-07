@@ -1,11 +1,11 @@
 RocketServo.asm                                                       Page: 1
-/Users/davidflynn/Projects/Rocket Servo/Firmware/
+/Users/davidflynn/Projects/Rocket-Servo/Firmware/
 
 00001 0000 	;====================================================================================================
 00002 0000 	;
 00003 0000 	;   Filename:	RocketServo.asm
-00004 0000 	;   Date:	8/31/2022
-00005 0000 	;   File Version:	1.0b1
+00004 0000 	;   Date:	11/7/2022
+00005 0000 	;   File Version:	1.0b2
 00006 0000 	;
 00007 0000 	;    Author:	David M. Flynn
 00008 0000 	;    Company:	Oxford V.U.E., Inc.
@@ -52,7 +52,7 @@ RocketServo.asm                                                       Page: 1
 00049 0000 	;  Pin 1 VDD (+5V)		+5V
 00050 0000 	;  Pin 2 RA5		CCP1
 00051 0000 	;  Pin 3 RA4		System LED Active Low/SW2 Dec switch Active Low
-00052 0000 	;  Pin 4 RA3/MCLR*/Vpp (Input only)	Command = Active High
+00052 0000 	;  Pin 4 RA3/MCLR*/Vpp (Input only)	Command = Active Low
 00053 0000 	;  Pin 5 RA2		LED 2 Active Low/SW1 Inc switch Active Low
 00054 0000 	;  Pin 6 RA1/ICSPCLK		n/c
 00055 0000 	;  Pin 7 RA0/ICSPDAT		n/c
@@ -100,10 +100,10 @@ RocketServo.asm                                                       Page: 1
 00089 0000 	;  *** must set apply Vdd before Vpp in ICD 3 settings ***
 00090 0000 	;
 00091 0000 	; '__CONFIG' directive is used to embed configuration data within .asm file.
-00092 0000 	; The lables following the directive are located in the respective .inc file.
 RocketServo.asm                                                       Page: 2
-/Users/davidflynn/Projects/Rocket Servo/Firmware/
+/Users/davidflynn/Projects/Rocket-Servo/Firmware/
 
+00092 0000 	; The lables following the directive are located in the respective .inc file.
 00093 0000 	; See respective data sheet for additional information on configuration word.
 00094 0000 	;
 00095 0000 		constant	oldCode=0
@@ -202,11 +202,11 @@ RocketServo.asm                                                       Page: 1
 00190 0000 0037 		SysFlags
 00191 0000 	;
 00192 0000 0038 		Debounce
+RocketServo.asm                                                       Page: 3
+/Users/davidflynn/Projects/Rocket-Servo/Firmware/
+
 00193 0000 	;
 00194 0000 		endc
-RocketServo.asm                                                       Page: 3
-/Users/davidflynn/Projects/Rocket Servo/Firmware/
-
 00195 0000 	;
 00196 0000 0037 	#Define	PulseSent	SysFlags,0
 00197 0000 0037 	#Define	InPosShutdown	SysFlags,1
@@ -304,12 +304,12 @@ RocketServo.asm                                                       Page: 1
 00289 0003 	; we loop through the interupt service routing every 0.01 seconds
 00290 0003 	;
 00291 0003 	;
+RocketServo.asm                                                       Page: 4
+/Users/davidflynn/Projects/Rocket-Servo/Firmware/
+
 00292 0003 		ORG	0x004	; interrupt vector location
 00293 0004 0020 		movlb	0	; bank0
 00294 0005 	;
-RocketServo.asm                                                       Page: 4
-/Users/davidflynn/Projects/Rocket Servo/Firmware/
-
 00295 0005 1C91 		btfss	PIR1,TMR2IF
 00296 0006 2828 		goto	IRQ_2
 00297 0007 1091 		bcf	PIR1,TMR2IF	; reset interupt flag bit
@@ -406,13 +406,13 @@ RocketServo.asm                                                       Page: 1
 00388 0044 0870 		MOVF	SigOutTime,W
 00389 0045 02F5 		SUBWF	CalcdDwell,F
 00390 0046 0871 		MOVF	SigOutTime+1,W
+RocketServo.asm                                                       Page: 5
+/Users/davidflynn/Projects/Rocket-Servo/Firmware/
+
 00391 0047 3BF6 		SUBWFB	CalcdDwellH,F
 00392 0048 2855 		GOTO	IRQ_Servo1_X
 00393 0049 	;
 00394 0049 	; output went low so this cycle is done
-RocketServo.asm                                                       Page: 5
-/Users/davidflynn/Projects/Rocket Servo/Firmware/
-
 00395 0049 3000 	IRQ_Servo1_OL	MOVLW	LOW kServoDwellTime
 00396 004A 0791 		ADDWF	CCPR1L,F
 00397 004B 307D 		MOVLW	HIGH kServoDwellTime
@@ -508,14 +508,14 @@ RocketServo.asm                                                       Page: 1
 00487 0087 	;
 00488 0087 170B 		bsf	INTCON,PEIE	; enable periferal interupts
 00489 0088 	;	bsf	INTCON,T0IE	; enable TMR0 interupt
+RocketServo.asm                                                       Page: 6
+/Users/davidflynn/Projects/Rocket-Servo/Firmware/
+
 00490 0088 178B 		bsf	INTCON,GIE	; enable interupts
 00491 0089 	;
 00492 0089 0020 		MOVLB	0x00	;bank 0
 00493 008A 3004 		movlw	0x04
 00494 008B 00AD 		movwf	Timer4Lo	;power up delay
-RocketServo.asm                                                       Page: 6
-/Users/davidflynn/Projects/Rocket Servo/Firmware/
-
 00495 008C 	;
 00496 008C 	;=========================================================================================
 00497 008C 	;=========================================================================================
@@ -592,7 +592,7 @@ RocketServo.asm                                                       Page: 1
 00567 00B9 321F 		bra	Set_Dest_End	; No
 00568 00BA 1372 		bcf	NewSWData
 00569 00BB 	;
-00570 00BB 1D8C 		btfss	CmdInputBit	;Contorl signal active?
+00570 00BB 198C 		btfsc	CmdInputBit	;Contorl signal active?
 00571 00BC 320E 		bra	ML_CmdNormal	; No
 00572 00BD 	; debounce, don't change until we've seen the input 5 times
 00573 00BD 3005 		movlw	0x05
@@ -610,15 +610,15 @@ RocketServo.asm                                                       Page: 1
 00584 00C7 00AC 		movwf	Timer3Hi
 00585 00C8 320F 		bra	Move_It
 00586 00C9 	;
+RocketServo.asm                                                       Page: 7
+/Users/davidflynn/Projects/Rocket-Servo/Firmware/
+
 00587 00C9 0AB8 	Rev_Debounce	incf	Debounce,F
 00588 00CA 320E 		bra	Set_Dest_End
 00589 00CB 	;
 00590 00CB 08B8 	ML_CmdNormal	movf	Debounce,F
 00591 00CC 		SKPZ
 00591 00CC 1D03      M		BTFSS	STATUS,Z		BTFSS	STATUS,Z
-RocketServo.asm                                                       Page: 7
-/Users/davidflynn/Projects/Rocket Servo/Firmware/
-
 00592 00CD 3208 		bra	Norm_Debounce
 00593 00CE 	;
 00594 00CE 0020 		movlb	0	;Bank 0
@@ -712,6 +712,9 @@ RocketServo.asm                                                       Page: 1
 00679 010F 00B1 		movwf	CurPos
 00680 0110 0830 		movf	Dest+1,W
 00681 0111 00B2 		movwf	CurPos+1
+RocketServo.asm                                                       Page: 8
+/Users/davidflynn/Projects/Rocket-Servo/Firmware/
+
 00682 0112 	;
 00683 0112 	Move_It_Now:
 00684 0112 0831 		movf	CurPos,W
@@ -719,9 +722,6 @@ RocketServo.asm                                                       Page: 1
 00686 0114 0832 		movf	CurPos+1,W
 00687 0115 00FD 		movwf	Param7D
 00688 0116 2118 		CALL	Copy7CToSig
-RocketServo.asm                                                       Page: 8
-/Users/davidflynn/Projects/Rocket Servo/Firmware/
-
 00689 0117 	Move_End:
 00690 0117 	;
 00691 0117 288D 		goto	MainLoop
@@ -814,6 +814,9 @@ RocketServo.asm                                                       Page: 1
 00776 014D 087C 		movf	Param7C,W
 00777 014E 00B5 		movwf	Position2
 00778 014F 0008 		return
+RocketServo.asm                                                       Page: 9
+/Users/davidflynn/Projects/Rocket-Servo/Firmware/
+
 00779 0150 	;
 00780 0150 	;=========================================================================================
 00781 0150 	;=========================================================================================
@@ -822,9 +825,6 @@ RocketServo.asm                                                       Page: 1
 00784 0150 0020 	StartServo	MOVLB	0	;bank 0
 00785 0151 1E72 		BTFSS	ServoOff
 00786 0152 0008 		RETURN
-RocketServo.asm                                                       Page: 9
-/Users/davidflynn/Projects/Rocket Servo/Firmware/
-
 00787 0153 1272 		BCF	ServoOff
 00788 0154 	;
 00789 0154 08AD 	SS_Start_Loop	movf	Timer4Lo,F
@@ -916,6 +916,9 @@ RocketServo.asm                                                       Page: 1
 00869 0191 2998 		GOTO	ClampInt_tooLow	; Yes
 00870 0192 		SKPZ		;=Min?
 00870 0192 1D03      M		BTFSS	STATUS,Z		BTFSS	STATUS,Z
+RocketServo.asm                                                       Page: 10
+/Users/davidflynn/Projects/Rocket-Servo/Firmware/
+
 00871 0193 0008 		RETURN		; No, 7D>kMinPulseWidth
 00872 0194 3008 		MOVLW	low kMinPulseWidth	; Yes, MSB is a match
 00873 0195 027C 		SUBWF	Param7C,W	;7C-kMinPulseWidth
@@ -925,9 +928,6 @@ RocketServo.asm                                                       Page: 1
 00876 0198 	;
 00877 0198 3008 	ClampInt_tooLow	MOVLW	low kMinPulseWidth
 00878 0199 00FC 		MOVWF	Param7C
-RocketServo.asm                                                       Page: 10
-/Users/davidflynn/Projects/Rocket Servo/Firmware/
-
 00879 019A 3007 		MOVLW	high kMinPulseWidth
 00880 019B 00FD 		MOVWF	Param7D
 00881 019C 0008 		RETURN
@@ -1018,6 +1018,9 @@ RocketServo.asm                                                       Page: 1
 00045 01B1 	; EEWriteW	(0+0) Write EEPROM address in W, Data in EEDataTemp
 00046 01B1 	; EEWrite	(0+0) Write EEPROM address in EEAdrTemp, Data in EEDataTemp, FSR0
 00047 01B1 	;
+RocketServo.asm                                                       Page: 11
+/Users/davidflynn/Projects/Rocket-Servo/Firmware/
+
 00048 01B1 	; StoreSerIn	Put the byte in W into the serial input buffer, FSR0
 00049 01B1 	; GetSerIn	Get a byte from the serial input buffer, FSR0
 00050 01B1 	; GetSerOutBytes	Get the number of bytes in the serial ouput buffer
@@ -1028,9 +1031,6 @@ RocketServo.asm                                                       Page: 1
 00055 01B1 	;=========================================================================================
 00056 01B1 	; Clears all RAM
 00057 01B1 	; Entry: none
-RocketServo.asm                                                       Page: 11
-/Users/davidflynn/Projects/Rocket Servo/Firmware/
-
 00058 01B1 	; Exit: none
 00059 01B1 	; RAM used: All
 00060 01B1 	; Calls:(2+0) ClearRam_L2
@@ -1120,6 +1120,9 @@ RocketServo.asm                                                       Page: 1
 00139 01EB 1903      M		BTFSC	STATUS,Z		BTFSC	STATUS,Z
 00140 01EC 0008 		RETURN
 00141 01ED 3001 		MOVLW	0x01
+RocketServo.asm                                                       Page: 12
+/Users/davidflynn/Projects/Rocket-Servo/Firmware/
+
 00142 01EE 0280 		SUBWF	INDF0,F	;TimerNLo
 00143 01EF 0A84 		INCF	FSR0L,F
 00144 01F0 3000 		MOVLW	0x00
@@ -1131,9 +1134,6 @@ RocketServo.asm                                                       Page: 1
 00150 01F3 	;If Timer is zero return Z flag,1 else Z=0
 00151 01F3 	;
 00152 01F3 082D 	TestT4_Zero	movf	Timer4Lo,W
-RocketServo.asm                                                       Page: 12
-/Users/davidflynn/Projects/Rocket Servo/Firmware/
-
 00153 01F4 042E 		iorwf	Timer4Hi,W
 00154 01F5 0008 		return
 00155 01F6 	;
@@ -1222,6 +1222,9 @@ RocketServo.asm                                                       Page: 1
 00234 021E 3055 		MOVLW	0x55
 00235 021F 0096 		MOVWF	EECON2	;Write 55h
 00236 0220 30AA 		MOVLW	0xAA
+RocketServo.asm                                                       Page: 13
+/Users/davidflynn/Projects/Rocket-Servo/Firmware/
+
 00237 0221 0096 		MOVWF	EECON2	;Write AAh
 00238 0222 1495 		BSF	EECON1,WR	;Set WR bit to begin write
 00239 0223 178B 		BSF	INTCON,GIE	;Enable Interrupts
@@ -1234,9 +1237,6 @@ RocketServo.asm                                                       Page: 1
 00246 0229 	;=========================================================================================================
 00247 0229 		IF useRS232
 00396 0229 		ENDIF
-RocketServo.asm                                                       Page: 13
-/Users/davidflynn/Projects/Rocket Servo/Firmware/
-
 00397 0229 	;
 00398 0229 	;
 00399 0229 	;
@@ -1248,6 +1248,244 @@ RocketServo.asm                                                       Page: 1
 01021 0229 	;
 01022 0229 	;
 01023 0229 		END
+
+X-Ref Table
+ActivationTime	012C 	ML_Btns_End
+ANSELA	018C 	start
+APFCON	011D 	start
+BtnChangeRate	0002 	ML_Btns_Inc, ML_Btns_Dec
+C	0000 	ClampInt, ClampInt_1, Param7D_LE_Param79
+CalcdDwell	0075 	IRQ_Servo1_1
+CalcdDwellH	0076 	IRQ_Servo1_1
+CCP1CON	0293 	IRQ_2, IRQ_Servo1_1, IRQ_Servo1_OL, start, SS_Start_Loop
+CCP1CON_Clr	0009 	IRQ_Servo1_1
+CCP1CON_Int	000A 	IRQ_Servo1_1, IRQ_Servo1_OL
+CCP1CON_Set	0008 	IRQ_Servo1_OL, SS_Start_Loop
+CCP1IE	0002 	start
+CCP1IF	0002 	IRQ_2, IRQ_Servo1_X
+CCP1M0	0000 	IRQ_Servo1_1
+CCP1SEL	0000 	start
+CCPR1H	0292 	IRQ_Servo1_1, IRQ_Servo1_OL, SS_Start_Loop
+CCPR1L	0291 	IRQ_Servo1_1, IRQ_Servo1_OL, SS_Start_Loop
+CFGS	0006 	EERead, EEWrite
+ClampInt ^	0181 	ML_Btns_Inc, ML_Btns_Dec
+ClampInt_1 ^	018E 	ClampInt
+ClampInt_tooHigh ^	019D 	ClampInt
+ClampInt_tooLow ^	0198 	ClampInt_1
+ClearRam ^	01B1 	start
+ClearRam_L2 ^	01BC 	ClearRam, ClearRam_L2
+CmdInputBit	PORTA,3	ML_Btns_End
+Copy7CToSig ^	0118 	Move_It_Now, SS_Start_Loop
+Copy7CToSig_1 ^	0120 	Copy7CToSig, Copy7CToSig_1
+CopyPos1ToDest ^	0132 	CopyPosToDest
+CopyPos1ToTemp ^	013C 	CopyPosToTemp
+CopyPos2ToDest ^	0137 	CopyPosToDest
+CopyPos2ToTemp ^	0141 	CopyPosToTemp
+CopyPosToDest ^	012F 	Move_It, SS_Start_Loop
+CopyPosToTemp ^	012C 	ML_Btns_Inc, ML_Btns_Dec
+CopyTempToPos ^	0129 	ML_Btns_Inc, ML_Btns_Dec
+CopyTempToPos1 ^	0146 	CopyTempToPos
+CopyTempToPos2 ^	014B 	CopyTempToPos
+CopyToRam ^	01C1 	start
+CopyToRam_L1 ^	01C7 	CopyToRam_L1
+CurPos	0031 	Set_Dest_End, Move_It_NIP, Move_It_New, Move_It_Dest, Move_It_Now, SS_Start_Loop
+		SetDestAsCur
+DataChangedFlag	Flags,3	MainLoop, ML_Btns_Inc, ML_Btns_Dec, ML_Btns_Save
+Debounce	0038 	ML_Btns_End, Rev_Debounce, ML_CmdNormal, Norm_Debounce
+DecBtnBit	PORTA,4	
+DecBtnFlag	Flags,1	, MainLoop, ML_Btns_Dec
+DecTimer ^	01E7 	DecTimer4, DecTimer3, DecTimer2
+DecTimer1 ^	01E6 	
+DecTimer2 ^	01E4 	
+DecTimer3 ^	01E2 	
+DecTimer4 ^	01E0 	
+DelayWuS ^	0204 	DecTimer
+DelayWuS_Loop ^	0205 	DelayWuS_Loop
+Dest	002F 	MainLoop, Set_Dest_End, Move_It_NIP, Move_It_Dest, CopyPos1ToDest, CopyPos2ToDest
+		SS_Start_Loop, SetDestAsCur
+EEAddrTemp	0025 	CopyToRam, CopyToRam_L1, SaveParams, SaveParams_L1, DelayWuS_Loop
+		EERead, EEWrite
+EEADRL	0191 	EERead, EEWrite
+EECON1	0195 	EERead, EEWrite, EEWriteLoop
+EECON2	0196 	EEWrite
+EEDataTemp	0026 	SaveParams_L1, EEWrite
+EEDATL	0193 	EERead, EEWrite
+EEPGD	0007 	EERead, EEWrite
+EERead ^	0209 	CopyToRam_L1
+EEWrite ^	0213 	SaveParams_L1
+EEWriteLoop ^	0225 	EEWriteLoop
+F	0001 	, SystemBlink_end, IRQ_Servo1_1, IRQ_Servo1_OL, ML_Btns_Inc, ML_Btns_Dec
+		Rev_Debounce, ML_CmdNormal, Norm_Debounce, Set_Dest_End, Move_It_NIP, Move_It_Neg
+		SS_Start_Loop, ClearRam_L2, CopyToRam_L1, SaveParams_L1, DecTimer, DelayWuS_Loop
+FirstRAMParam	Position1	CopyToRam, SaveParams
+Flags	0072 	, SystemBlink_end, IRQ_2, start, MainLoop, ML_Btns_Inc, ML_Btns_Dec, ML_Btns_Save
+		ML_Btns_End, ML_CmdNormal, CopyTempToPos, CopyPosToTemp, CopyPosToDest, StartServo
+		SS_Start_Loop
+FSR0	0004 	ClearRam, ClearRam_L2, CopyToRam, CopyToRam_L1, SaveParams, SaveParams_L1
+FSR0H	0005 	, ClearRam, CopyToRam, SaveParams, DecTimer
+FSR0L	0004 	DecTimer
+RocketServo.asm   X-Ref Table                                            Page: 14
+/Users/davidflynn/Projects/Rocket-Servo/Firmware/
+
+GIE	0007 	start, Copy7CToSig_1, EEWrite
+IncBtnBit	PORTA,2	
+IncBtnFlag	Flags,0	, MainLoop
+INDF0	0000 	ClearRam_L2, CopyToRam_L1, SaveParams_L1, DecTimer
+InPosition	SysFlags,2	IRQ_Servo1_1, IRQ_Servo1_OL, Set_Dest_End, Move_It_NIP, SS_Start_Loop
+InPosShutdown	SysFlags,1	IRQ_Servo1_1, IRQ_Servo1_OL
+INTCON	000B 	start, Copy7CToSig_1, EEWrite
+IRQ_2 ^	0028 	
+IRQ_Servo1_1 ^	0031 	IRQ_2
+IRQ_Servo1_End ^	0057 	IRQ_2
+IRQ_Servo1_OL ^	0049 	IRQ_Servo1_1
+IRQ_Servo1_X ^	0055 	IRQ_2, IRQ_Servo1_1
+kDefaultPosition1	0C80 	EEWriteLoop
+kDefaultPosition2	0AF0 	EEWriteLoop
+kInPosShutdown	0002 	EEWriteLoop
+kMaxPulseWidth	1068 	ClampInt, ClampInt_tooHigh
+kMidPulseWidth	0BB8 	MainLoop, SS_Start_Loop
+kMinPulseWidth	0708 	ClampInt_1, ClampInt_tooLow
+kServoDwellTime	7D00 	IRQ_Servo1_1, IRQ_Servo1_OL
+LastRAMParam	SysFlags	CopyToRam_L1, SaveParams_L1
+LED_Ticks	0023 	
+LED_Time	0021 	, start
+LED2_End ^	0027 	SystemBlink_end
+LED2_Ticks	0024 	SystemBlink_end
+LED2_Time	0022 	SystemBlink_end, start
+LED2Flag	Flags,2	SystemBlink_end, ML_Btns_End, ML_CmdNormal, SS_Start_Loop
+LED2TrisBit	TRISA,2	, SystemBlink_end
+LEDTIME	0064 	start
+MainLoop ^	008D 	Move_End
+ML_Btns_Dec ^	00A8 	MainLoop
+ML_Btns_End ^	00B8 	MainLoop, ML_Btns_Inc, ML_Btns_Dec
+ML_Btns_Inc ^	009D 	MainLoop
+ML_Btns_Save ^	00B5 	ML_Btns_Dec
+ML_CmdNormal ^	00CB 	ML_Btns_End
+Move_End ^	0117 	Set_Dest_End
+Move_It ^	00D8 	ML_Btns_End, ML_CmdNormal
+Move_It_Dest ^	010E 	Move_It_NIP, Move_It_Neg
+Move_It_Neg ^	0106 	Move_It_NIP
+Move_It_New ^	0101 	Move_It_Neg
+Move_It_NIP ^	00EA 	Set_Dest_End
+Move_It_Now ^	0112 	Set_Dest_End, Move_It_New
+NewSWData	Flags,6	, ML_Btns_End
+Norm_Debounce ^	00D6 	ML_CmdNormal
+NOT_WPUEN	0007 	start
+nvFirstParamByte	nvPosition1Lo	EEWriteLoop, CopyToRam, SaveParams
+nvLastParamByte	nvSysFlags	EEWriteLoop
+nvPosition1Hi	0001 	EEWriteLoop
+nvPosition1Lo	0000 	EEWriteLoop, CopyToRam, SaveParams
+nvPosition2Hi	0003 	EEWriteLoop
+nvPosition2Lo	0002 	EEWriteLoop
+nvSysFlags	0004 	EEWriteLoop
+oldCode	0000 	ClearRam
+OPTION_REG	0095 	start
+OSCCON	0099 	start
+OSCCON_Value	0072 	start
+Param77	0077 	Move_It_NIP, Move_It_Neg, Param7D_LE_Param79, SetTrue, DelayWuS, DelayWuS_Loop
+Param78	0078 	Set_Dest_End, Move_It_NIP, Param7D_LE_Param79
+Param79	0079 	Move_It_NIP, Param7D_LE_Param79
+Param7C	007C 	ML_Btns_Inc, ML_Btns_Dec, Move_It_NIP, Move_It_New, Move_It_Neg, Move_It_Now
+		Copy7CToSig, Copy7CToSig_1, CopyPos1ToTemp, CopyPos2ToTemp, CopyTempToPos1, CopyTempToPos2
+		SS_Start_Loop, SetDestAsCur, ClampInt, ClampInt_1, ClampInt_tooLow, ClampInt_tooHigh
+		Param7D_LE_Param79
+Param7D	007D 	ML_Btns_Inc, ML_Btns_Dec, Move_It_NIP, Move_It_New, Move_It_Neg, Move_It_Now
+		Copy7CToSig, Copy7CToSig_1, CopyPos1ToTemp, CopyPos2ToTemp, CopyTempToPos1, CopyTempToPos2
+		SS_Start_Loop, SetDestAsCur, ClampInt, ClampInt_1, ClampInt_tooLow, ClampInt_tooHigh
+		Param7D_LE_Param79
+Param7D_LE_Param79 ^	01A2 	Move_It_NIP, Move_It_Neg
+Param7F	007F 	ClearRam, ClearRam_L2
+PCLATH	000A 	
+PEIE	0006 	start
+PIE1	0091 	start
+PIR1	0011 	, IRQ_2, IRQ_Servo1_X
+PORTA	000C 	, start, ML_Btns_End
+PortADDRBits	00DC 	start
+PortAValue	0000 	start
+Position1	0033 	CopyPos1ToDest, CopyPos1ToTemp, CopyTempToPos1, CopyToRam, SaveParams
+Position2	0035 	CopyPos2ToDest, CopyPos2ToTemp, CopyTempToPos2
+PR2	001B 	start
+PR2_Value	007D 	start
+PS0	0000 	start
+PS1	0001 	start
+PS2	0002 	start
+PSA	0003 	start
+PulseSent	SysFlags,0	IRQ_2, Set_Dest_End
+RD	0000 	EERead
+Rev_Debounce ^	00C9 	ML_Btns_End
+SaveParams ^	01D0 	ML_Btns_Save
+SaveParams_L1 ^	01D6 	SaveParams_L1
+ServoMoveTime	012C 	Move_It_NIP, SS_Start_Loop
+ServoOff	Flags,4	IRQ_2, start, StartServo
+Set_Dest_End ^	00D9 	MainLoop, ML_Btns_End, Rev_Debounce, Norm_Debounce
+SetDestAsCur ^	017A 	SS_Start_Loop
+SetTrue ^	01AF 	Param7D_LE_Param79
+SigOutTime	0070 	IRQ_Servo1_1, Copy7CToSig, Copy7CToSig_1
+SigOutTimeH	0071 	Copy7CToSig, Copy7CToSig_1
+SlewChangeRate	0010 	Move_It_NIP, Move_It_Neg
+SMRevFlag	Flags,5	ML_Btns_End, ML_CmdNormal, CopyTempToPos, CopyPosToTemp, CopyPosToDest
+		SS_Start_Loop
+SS_Start_Loop ^	0154 	SS_Start_Loop
+RocketServo.asm   X-Ref Table                                            Page: 15
+/Users/davidflynn/Projects/Rocket-Servo/Firmware/
+
+start ^	0058 	
+StartServo ^	0150 	start
+STATUS	0003 	MainLoop, ML_Btns_End, ML_CmdNormal, Set_Dest_End, Copy7CToSig, SS_Start_Loop
+		ClampInt, ClampInt_1, Param7D_LE_Param79, CopyToRam_L1, SaveParams_L1, DecTimer
+SysFlags	0037 	IRQ_2, IRQ_Servo1_1, IRQ_Servo1_OL, Set_Dest_End, Move_It_NIP, SS_Start_Loop
+		CopyToRam_L1, SaveParams_L1
+SysLEDTrisBit	TRISA,4	
+SystemBlink_end ^	001E 	
+T1CON	0018 	start
+T1CON_Val	0001 	start
+T1GCON	0019 	start
+T2CON	001C 	start
+T2CON_Value	004E 	start
+Timer1Hi	0028 	DecTimer1, DecTimer
+Timer1Lo	0027 	DecTimer
+Timer2Hi	002A 	Set_Dest_End, Move_It_NIP, SS_Start_Loop, DecTimer2, DecTimer
+Timer2Lo	0029 	Set_Dest_End, Move_It_NIP, SS_Start_Loop, DecTimer
+Timer3Hi	002C 	ML_Btns_End, ML_CmdNormal, DecTimer3, DecTimer
+Timer3Lo	002B 	ML_Btns_End, ML_CmdNormal, DecTimer
+Timer4Hi	002E 	MainLoop, SS_Start_Loop, DecTimer4, DecTimer
+Timer4Lo	002D 	start, MainLoop, ML_Btns_Inc, ML_Btns_Dec, SS_Start_Loop, DecTimer
+TMR0CS	0005 	start
+TMR1GE	0007 	start
+TMR1H	0017 	SS_Start_Loop
+TMR1L	0016 	SS_Start_Loop
+TMR2IE	0001 	start
+TMR2IF	0001 	
+TRISA	008C 	, SystemBlink_end, start
+useRS232	0000 	EEWriteLoop
+W	0000 	, SystemBlink_end, IRQ_Servo1_1, MainLoop, ML_Btns_End, ML_CmdNormal, Set_Dest_End
+		Move_It_NIP, Move_It_New, Move_It_Dest, Move_It_Now, Copy7CToSig, Copy7CToSig_1
+		CopyPos1ToDest, CopyPos2ToDest, CopyPos1ToTemp, CopyPos2ToTemp, CopyTempToPos1
+		CopyTempToPos2, SetDestAsCur, ClampInt, ClampInt_1, Param7D_LE_Param79, CopyToRam_L1
+		SaveParams_L1, DecTimer, EERead, EEWrite
+WDTCON	0097 	start
+WR	0001 	EEWrite, EEWriteLoop
+WREN	0002 	EEWrite
+Z	0002 	MainLoop, ML_Btns_End, ML_CmdNormal, Set_Dest_End, Copy7CToSig, SS_Start_Loop
+		ClampInt, ClampInt_1, Param7D_LE_Param79, CopyToRam_L1, SaveParams_L1, DecTimer
+ 
+
+X-Ref Table (The UnCalled)
+Delay100uS !	0201 	
+Delay10uS !	01FF 	
+Delay40uS !	0203 	
+EEReadW !	0208 	
+EEWriteW !	0212 	
+IRQ_Servo1 !	0028 	
+SetMiddlePosition !	0171 	
+SS_CmdNormal !	0157 	
+SS_Move_It !	015A 	
+SystemBlink_1 !	0018 	
+TestT1_Zero !	01FC 	
+TestT2_Zero !	01F9 	
+TestT3_Zero !	01F6 	
+TestT4_Zero !	01F3 	
+ 
 
 Memory Usage Map ('X' = Used, '-' = Unused)
  
