@@ -1388,6 +1388,11 @@
     (effects (font (size 1.524 1.524)) (justify left bottom))
     (uuid 0d585116-a8f2-4f11-8995-65a809d545bb)
   )
+  (text "R1     470Ω\nR2,R6,R8,R11   1.0KΩ\nR3   10KΩ\nR4   220Ω\nR5,R7   47KΩ\nR9    270Ω\nR10   20Ω\nD1  SMA 1A\nC1,C3,C4,C6,C7  0.1uf 0805\nC2  33uf\nC5  220uf\nP2  3 pin sip pin header\nIC1 PIV12F1822-I/P 8DIP\nU1  L7805 DPAK\nU2  TLP227GN 4DIP\n"
+    (at 25.4 157.48 0)
+    (effects (font (size 1.524 1.524)) (justify left bottom))
+    (uuid 1e031c5a-d59a-4884-9832-75b7f80feae9)
+  )
   (text "Rev A, Added battery voltage sensing and LED connector."
     (at 25.4 194.31 0)
     (effects (font (size 1.524 1.524)) (justify left bottom))
@@ -2130,7 +2135,7 @@
     (in_bom yes) (on_board yes)
     (uuid f42c9677-46fb-435d-8133-20b9ca51e3dc)
     (property "Reference" "R1" (id 0) (at 92.71 62.992 90))
-    (property "Value" "220R" (id 1) (at 92.71 60.96 90))
+    (property "Value" "470R" (id 1) (at 92.71 60.96 90))
     (property "Footprint" "Resistor_SMD:R_0805_2012Metric_Pad1.20x1.40mm_HandSolder" (id 2) (at 92.71 59.182 90)
       (effects (font (size 0.762 0.762)) hide)
     )
@@ -2234,7 +2239,7 @@
       (reference "P3") (unit 1) (value "Conn_01x02") (footprint "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical")
     )
     (path "/f42c9677-46fb-435d-8133-20b9ca51e3dc"
-      (reference "R1") (unit 1) (value "220R") (footprint "Resistor_SMD:R_0805_2012Metric_Pad1.20x1.40mm_HandSolder")
+      (reference "R1") (unit 1) (value "470R") (footprint "Resistor_SMD:R_0805_2012Metric_Pad1.20x1.40mm_HandSolder")
     )
     (path "/00000000-0000-0000-0000-00005615ef3d"
       (reference "R2") (unit 1) (value "1K") (footprint "Resistor_SMD:R_0805_2012Metric_Pad1.20x1.40mm_HandSolder")
