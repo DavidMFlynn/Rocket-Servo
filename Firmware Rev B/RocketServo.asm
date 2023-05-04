@@ -1,8 +1,8 @@
 ;====================================================================================================
 ;
 ;   Filename:	RocketServo.asm
-;   Date:	12/28/2022
-;   File Version:	1.1b1
+;   Date:	5/4/2023
+;   File Version:	1.1b2
 ;
 ;    Author:	David M. Flynn
 ;    Company:	Oxford V.U.E., Inc.
@@ -13,12 +13,14 @@
 ;    RC Servo Activator for high power rocketry uses PIC12F1822
 ;
 ;    History:
+; 1.1b2   5/4/2023	Fixed batt V blink, 10 or 11 blinks.
 ; 1.1b1   12/28/2022	Added battery voltage sensing RA0 9.75C/V 3 for diode
 ; 1.0b2   11/7/2022	Inverted CmdInputBit to active low
 ; 1.0b1   8/31/2022    Copied from SM_Ctrl_RC_Servo.
 ;
 ;====================================================================================================
 ; Options
+HasBattV	EQU	1	;Set to 0 or 1
 ;====================================================================================================
 ; To Do's
 ;
@@ -252,7 +254,7 @@ HasISR	EQU	0x80	;used to enable interupts 0x80=true 0x00=false
 ;=========================================================================================
 ;==============================================================================================
 ; ID Locations
-	__idlocs	0x10A2
+	__idlocs	0x11B1
 ;
 ;==============================================================================================
 ; EEPROM locations (NV-RAM) 0x00..0x7F (offsets)
@@ -443,7 +445,13 @@ start	MOVLB	0x01	; select bank 1
 	movwf	WDTCON
 ;
 	MOVLB	0x03	; bank 3
+;
+	if HasBattV
 	MOVLW	0x01
+	else
+	MOVLW	0x00
+	endif
+;
 	MOVWF	ANSELA	;AN0 only
 ;
 ; setup timer 1 for 0.5uS/count
@@ -509,23 +517,25 @@ start	MOVLB	0x01	; select bank 1
 ;=========================================================================================
 ;  Main Loop
 ;
+	if HasBattV
 	CALL	ReadAN0_ColdStart
 	CALL	LongFlash
 ;
 	CALL	ReadAN0
 	CALL	ReadAN0
 ; devide by 8
-	lsr	Param7D,F
+	lsrf	Param7D,F
 	rrf	Param7C,F
-	lsr	Param7D,F
+	lsrf	Param7D,F
 	rrf	Param7C,F
-	lsr	Param7D,F
+	lsrf	Param7D,F
 	rrf	Param7C,F
 ;
 	movlw	.50	; 1/2 second
 	movwf	LED_Time
-	movf	Param7C,F
+	movf	Param7C,W
 	movwf	LED_Blinks
+;
 Start_L1	CLRWDT
 	movf	LED_Blinks,W
 	SKPZ
@@ -534,6 +544,7 @@ Start_L1	CLRWDT
 ;
 	CALL	LongFlash
 ;
+	endif
 ; normal system blinks
 	MOVLW	LEDTIME
 	MOVWF	LED_Time
@@ -855,16 +866,16 @@ ReadAN0_L1	BTFSC	ADCON0,NOT_DONE	;Conversion done?
 	MOVF	ADRESL,W
 	MOVWF	Param7C
 	BSF	ADCON0,ADGO	;Start next conversion.
-	MOVLB	0
+	MOVLB	0	;bank 0
 	RETURN
 ;
-ReadAN0_ColdStart	MOVLB	1
+ReadAN0_ColdStart	MOVLB	1	;bank 1
 	MOVLW	0xA0	;Right Just fosc/32
 	MOVWF	ADCON1
 	MOVLW	b'00000001'	;Select AN0
 	MOVWF	ADCON0
 	BSF	ADCON0,GO
-ReadAN0_Rtn	MOVLB	0
+ReadAN0_Rtn	MOVLB	0	;bank 0
 	Return
 ;
 ;=========================================================================================
