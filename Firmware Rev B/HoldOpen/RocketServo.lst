@@ -25,7 +25,7 @@ RocketServo.asm                                                       Page: 1
 00022 0000 	;====================================================================================================
 00023 0000 	; Options
 00024 0000 0001 	HasBattV	EQU	1	;Set to 0 or 1
-00025 0000 0000 	BP3Hold	EQU	0	;Hold at reverse value
+00025 0000 0001 	BP3Hold	EQU	1	;Hold at reverse value
 00026 0000 	;====================================================================================================
 00027 0000 	; To Do's
 00028 0000 	;
@@ -130,10 +130,10 @@ RocketServo.asm                                                       Page: 1
 00116 0000 0BB8 	kMidPulseWidth	EQU	d'3000'	;1500uS
 00117 0000 1068 	kMaxPulseWidth	EQU	d'4200'	;2100uS
 00118 0000 		if BP3Hold
+00119 0000 07D0 	kDefaultPosition1	EQU	d'2000'	;1000uS Locked
+00120 0000 100E 	kDefaultPosition2	EQU	d'4110'	;2055uS Open
+00121 0000 0001 	HoldOpen	EQU	1
 00122 0000 		else
-00123 0000 0C80 	kDefaultPosition1	EQU	kMidPulseWidth+d'200'
-00124 0000 0AF0 	kDefaultPosition2	EQU	kMidPulseWidth-d'200'
-00125 0000 0000 	HoldOpen	EQU	0
 00126 0000 		endif
 00127 0000 7D00 	kServoDwellTime	EQU	d'32000'	;16mS
 00128 0000 0002 	kInPosShutdown	EQU	b'00000010'	;b'00000010' enabled 0x00 disabled
@@ -281,10 +281,10 @@ RocketServo.asm                                                       Page: 1
 00269 0000 	; EEPROM locations (NV-RAM) 0x00..0x7F (offsets)
 00270 0000 		org	0xF000
 00271 F000 	;
-00272 F000 0080 		de	LOW kDefaultPosition1	;nvPosition1Lo
-00273 F001 000C 		de	HIGH kDefaultPosition1
-00274 F002 00F0 		de	LOW kDefaultPosition2
-00275 F003 000A 		de	HIGH kDefaultPosition2
+00272 F000 00D0 		de	LOW kDefaultPosition1	;nvPosition1Lo
+00273 F001 0007 		de	HIGH kDefaultPosition1
+00274 F002 000E 		de	LOW kDefaultPosition2
+00275 F003 0010 		de	HIGH kDefaultPosition2
 00276 F004 	;
 00277 F004 0002 		de	kInPosShutdown	;nvSysFlags
 00278 F005 	;
@@ -329,10 +329,10 @@ RocketServo.asm                                                       Page: 1
 00314 0008 	;Decrement timers until they are zero
 00315 0008 	;
 00316 0008 0185 		CLRF	FSR0H
-00317 0009 2234 		call	DecTimer1	;if timer 1 is not zero decrement
-00318 000A 2232 		call	DecTimer2
-00319 000B 2230 		call	DecTimer3
-00320 000C 222E 		call	DecTimer4
+00317 0009 2233 		call	DecTimer1	;if timer 1 is not zero decrement
+00318 000A 2231 		call	DecTimer2
+00319 000B 222F 		call	DecTimer3
+00320 000C 222D 		call	DecTimer4
 00321 000D 	;
 00322 000D 	;-----------------------------------------------------------------
 00323 000D 	; blink LEDs
@@ -489,7 +489,7 @@ RocketServo.asm                                                       Page: 1
 00471 0070 1399 		bcf	T1GCON,TMR1GE
 00472 0071 	;
 00473 0071 	; clear memory to zero
-00474 0071 21FF 		CALL	ClearRam
+00474 0071 21FE 		CALL	ClearRam
 00475 0072 	;
 00476 0072 	; Setup timer 2 for 0.01S/Interupt
 00477 0072 304E 		MOVLW	T2CON_Value	;Setup T2 for 100/s
@@ -531,7 +531,7 @@ RocketServo.asm                                                       Page: 1
 00510 008B 00A2 		movwf	LED2_Time
 00511 008C 	;
 00512 008C 0064 		CLRWDT
-00513 008D 220F 		CALL	CopyToRam
+00513 008D 220E 		CALL	CopyToRam
 00514 008E 0064 		CLRWDT
 00515 008F 	;
 00516 008F 	;
@@ -548,11 +548,11 @@ RocketServo.asm                                                       Page: 1
 00527 0094 	;  Main Loop
 00528 0094 	;
 00529 0094 		if HasBattV
-00530 0094 2196 		CALL	ReadAN0_ColdStart
+00530 0094 2195 		CALL	ReadAN0_ColdStart
 00531 0095 20AF 		CALL	LongFlash
 00532 0096 	;
-00533 0096 2188 		CALL	ReadAN0
-00534 0097 2188 		CALL	ReadAN0
+00533 0096 2187 		CALL	ReadAN0
+00534 0097 2187 		CALL	ReadAN0
 00535 0098 	; devide by 8
 00536 0098 36FD 		lsrf	Param7D,F
 00537 0099 0CFC 		rrf	Param7C,F
@@ -582,7 +582,7 @@ RocketServo.asm                                                       Page: 1
 00560 00AA 30FF 		movlw	0xFF
 00561 00AB 00A5 		movwf	LED_Blinks
 00562 00AC 	;
-00563 00AC 219E 		CALL	StartServo
+00563 00AC 219D 		CALL	StartServo
 00564 00AD 20BD 		CALL	HomeServo
 00565 00AE 3216 		BRA	MainLoop
 00566 00AF 	;
@@ -644,16 +644,16 @@ RocketServo.asm                                                       Page: 1
 00616 00D1 300B 		movlw	high kMidPulseWidth
 00617 00D2 00B1 		movwf	Dest+1
 00618 00D3 11F2 		bcf	DataChangedFlag
-00619 00D4 323C 		bra	Set_Dest_End
+00619 00D4 323B 		bra	Set_Dest_End
 00620 00D5 	;
 00621 00D5 	; Handle INC button
-00622 00D5 2164 	ML_Btns_Inc	call	CopyPosToTemp
+00622 00D5 2163 	ML_Btns_Inc	call	CopyPosToTemp
 00623 00D6 3002 		movlw	BtnChangeRate
 00624 00D7 07FC 		addwf	Param7C,F
 00625 00D8 3000 		movlw	0x00
 00626 00D9 3DFD 		addwfc	Param7D,F
-00627 00DA 21CF 		call	ClampInt
-00628 00DB 2161 		call	CopyTempToPos
+00627 00DA 21CE 		call	ClampInt
+00628 00DB 2160 		call	CopyTempToPos
 00629 00DC 15F2 		bsf	DataChangedFlag
 00630 00DD 	;
 00631 00DD 3005 		movlw	0x05	; 0.05 seconds
@@ -664,13 +664,13 @@ RocketServo.asm                                                       Page: 1
 00636 00E1 320B 		bra	ML_Btns_Save	; No
 00637 00E2 	;
 00638 00E2 	; Handle DEC button
-00639 00E2 2164 		call	CopyPosToTemp
+00639 00E2 2163 		call	CopyPosToTemp
 00640 00E3 3002 		movlw	BtnChangeRate
 00641 00E4 02FC 		subwf	Param7C,F
 00642 00E5 3000 		movlw	0x00
 00643 00E6 3BFD 		subwfb	Param7D,F
-00644 00E7 21CF 		call	ClampInt
-00645 00E8 2161 		call	CopyTempToPos
+00644 00E7 21CE 		call	ClampInt
+00645 00E8 2160 		call	CopyTempToPos
 00646 00E9 15F2 		bsf	DataChangedFlag
 00647 00EA 	;
 00648 00EA 3005 		movlw	0x05	; 0.05 seconds
@@ -678,7 +678,7 @@ RocketServo.asm                                                       Page: 1
 00650 00EC 3203 		bra	ML_Btns_End
 00651 00ED 		bra	ML_Btns_End
 00652 00ED 19F2 	ML_Btns_Save	btfsc	DataChangedFlag
-00653 00EE 221E 		call	SaveParams
+00653 00EE 221D 		call	SaveParams
 00654 00EF 11F2 		bcf	DataChangedFlag
 00655 00F0 	ML_Btns_End:
 00656 00F0 	;
@@ -686,7 +686,7 @@ RocketServo.asm                                                       Page: 1
 00658 00F0 	; Set Dest
 00659 00F0 	;
 00660 00F0 1F72 		btfss	NewSWData	;10mS interval passed?
-00661 00F1 321F 		bra	Set_Dest_End	; No
+00661 00F1 321E 		bra	Set_Dest_End	; No
 00662 00F2 1372 		bcf	NewSWData
 00663 00F3 	;
 00664 00F3 198C 		btfsc	CmdInputBit	;Contorl signal active?
@@ -705,10 +705,10 @@ RocketServo.asm                                                       Page: 1
 00676 00FD 00AC 		movwf	Timer3Lo
 00677 00FE 3001 		movlw	High ActivationTime
 00678 00FF 00AD 		movwf	Timer3Hi
-00679 0100 320F 		bra	Move_It
+00679 0100 320E 		bra	Move_It
 00680 0101 	;
 00681 0101 0AB9 	Rev_Debounce	incf	Debounce,F
-00682 0102 320E 		bra	Set_Dest_End
+00682 0102 320D 		bra	Set_Dest_End
 00683 0103 	;
 00684 0103 08B9 	ML_CmdNormal	movf	Debounce,F
 00685 0104 		SKPZ
@@ -716,666 +716,665 @@ RocketServo.asm                                                       Page: 1
 /Users/davidflynn/Projects/Rocket-Servo/Firmware Rev B/
 
 00685 0104 1D03      M		BTFSS	STATUS,Z		BTFSS	STATUS,Z
-00686 0105 3208 		bra	Norm_Debounce
+00686 0105 3207 		bra	Norm_Debounce
 00687 0106 	;
 00688 0106 0020 		movlb	0	;Bank 0
 00689 0107 082C 		movf	Timer3Lo,W
 00690 0108 042D 		iorwf	Timer3Hi,W
 00691 0109 		SKPZ		;Activation time done?
 00691 0109 1D03      M		BTFSS	STATUS,Z		BTFSS	STATUS,Z
-00692 010A 3205 		bra	Move_It	; No
+00692 010A 3204 		bra	Move_It	; No
 00693 010B 		if HoldOpen=0
-00694 010B 12F2 		bcf	SMRevFlag
-00695 010C 		endif
-00696 010C 1172 		bcf	LED2Flag
-00697 010D 3202 		bra	Move_It
-00698 010E 	;
-00699 010E 03B9 	Norm_Debounce	decf	Debounce,F
-00700 010F 3201 		bra	Set_Dest_End
-00701 0110 	;
-00702 0110 2167 	Move_It	call	CopyPosToDest
-00703 0111 	;
-00704 0111 	Set_Dest_End:
-00705 0111 	;
-00706 0111 	;---------------------
-00707 0111 	; Move CurPos toward Dest
-00708 0111 0020 		movlb	0	;Bank 0
-00709 0112 1C38 		btfss	PulseSent
-00710 0113 323B 		bra	Move_End
-00711 0114 1038 		bcf	PulseSent
-00712 0115 	;
-00713 0115 0830 		movf	Dest,W
-00714 0116 0232 		subwf	CurPos,W
-00715 0117 00F8 		movwf	Param78
-00716 0118 0831 		movf	Dest+1,W
-00717 0119 3B33 		subwfb	CurPos+1,W
-00718 011A 04F8 		iorwf	Param78,F
-00719 011B 		SKPZ		;Dest == CurPos?
-00719 011B 1D03      M		BTFSS	STATUS,Z		BTFSS	STATUS,Z
-00720 011C 3205 		bra	Move_It_NIP
-00721 011D 082A 		movf	Timer2Lo,W
-00722 011E 042B 		iorwf	Timer2Hi,W
-00723 011F 		SKPNZ
-00723 011F 1903      M		BTFSC	STATUS,Z		BTFSC	STATUS,Z
-00724 0120 1538 		bsf	InPosition
-00725 0121 3228 		bra	Move_It_Now	; Yes
-00726 0122 	;
-00727 0122 302C 	Move_It_NIP	movlw	Low ServoMoveTime
-00728 0123 00AA 		movwf	Timer2Lo
-00729 0124 3001 		movlw	High ServoMoveTime
-00730 0125 00AB 		movwf	Timer2Hi
-00731 0126 1138 		bcf	InPosition
-00732 0127 	;
-00733 0127 0830 		movf	Dest,W
-00734 0128 00F8 		movwf	Param78
-00735 0129 0831 		movf	Dest+1,W
-00736 012A 00F9 		movwf	Param79
-00737 012B 	;
-00738 012B 0832 		movf	CurPos,W
-00739 012C 00FC 		movwf	Param7C
-00740 012D 0833 		movf	CurPos+1,W
-00741 012E 00FD 		movwf	Param7D
-00742 012F 	;
-00743 012F 21F0 		call	Param7D_LE_Param79
-00744 0130 1C77 		btfss	Param77,0	;CurPos<=Dest?
-00745 0131 320C 		bra	Move_It_Neg	; No, CurPos>Dest
-00746 0132 	;CurPos<Dest, so move CurPos positive
-00747 0132 3010 		movlw	SlewChangeRate
-00748 0133 07FC 		addwf	Param7C,F
-00749 0134 3000 		movlw	0x00
-00750 0135 3DFD 		addwfc	Param7D,F
-00751 0136 21F0 		call	Param7D_LE_Param79
-00752 0137 1C77 		btfss	Param77,0	;CurPos<=Dest Still?
-00753 0138 320D 		bra	Move_It_Dest	; No, CurPos>Dest
-00754 0139 				; Yes, CurPos+=SlewChangeRate
-00755 0139 	;
-00756 0139 	; make the calculated position the current position
-00757 0139 087C 	Move_It_New	movf	Param7C,W
-00758 013A 00B2 		movwf	CurPos
-00759 013B 087D 		movf	Param7D,W
-00760 013C 00B3 		movwf	CurPos+1
-00761 013D 320C 		bra	Move_It_Now
-00762 013E 	;
-00763 013E 	Move_It_Neg
-00764 013E 3010 		movlw	SlewChangeRate
-00765 013F 02FC 		subwf	Param7C,F
-00766 0140 3000 		movlw	0x00
-00767 0141 3BFD 		subwfb	Param7D,F
-00768 0142 21F0 		call	Param7D_LE_Param79
-00769 0143 1877 		btfsc	Param77,0	;CurPos<=Dest now?
-00770 0144 3201 		bra	Move_It_Dest	; Yes, CurPos<=Dest
-00771 0145 33F3 		bra	Move_It_New
-00772 0146 	;
-00773 0146 	; make the current position the destination
-00774 0146 0830 	Move_It_Dest	movf	Dest,W
-00775 0147 00B2 		movwf	CurPos
-00776 0148 0831 		movf	Dest+1,W
-00777 0149 00B3 		movwf	CurPos+1
-00778 014A 	;
-00779 014A 	Move_It_Now:
-00780 014A 0832 		movf	CurPos,W
+00695 010B 		endif
+00696 010B 1172 		bcf	LED2Flag
+00697 010C 3202 		bra	Move_It
+00698 010D 	;
+00699 010D 03B9 	Norm_Debounce	decf	Debounce,F
+00700 010E 3201 		bra	Set_Dest_End
+00701 010F 	;
+00702 010F 2166 	Move_It	call	CopyPosToDest
+00703 0110 	;
+00704 0110 	Set_Dest_End:
+00705 0110 	;
+00706 0110 	;---------------------
+00707 0110 	; Move CurPos toward Dest
+00708 0110 0020 		movlb	0	;Bank 0
+00709 0111 1C38 		btfss	PulseSent
+00710 0112 323B 		bra	Move_End
+00711 0113 1038 		bcf	PulseSent
+00712 0114 	;
+00713 0114 0830 		movf	Dest,W
+00714 0115 0232 		subwf	CurPos,W
+00715 0116 00F8 		movwf	Param78
+00716 0117 0831 		movf	Dest+1,W
+00717 0118 3B33 		subwfb	CurPos+1,W
+00718 0119 04F8 		iorwf	Param78,F
+00719 011A 		SKPZ		;Dest == CurPos?
+00719 011A 1D03      M		BTFSS	STATUS,Z		BTFSS	STATUS,Z
+00720 011B 3205 		bra	Move_It_NIP
+00721 011C 082A 		movf	Timer2Lo,W
+00722 011D 042B 		iorwf	Timer2Hi,W
+00723 011E 		SKPNZ
+00723 011E 1903      M		BTFSC	STATUS,Z		BTFSC	STATUS,Z
+00724 011F 1538 		bsf	InPosition
+00725 0120 3228 		bra	Move_It_Now	; Yes
+00726 0121 	;
+00727 0121 302C 	Move_It_NIP	movlw	Low ServoMoveTime
+00728 0122 00AA 		movwf	Timer2Lo
+00729 0123 3001 		movlw	High ServoMoveTime
+00730 0124 00AB 		movwf	Timer2Hi
+00731 0125 1138 		bcf	InPosition
+00732 0126 	;
+00733 0126 0830 		movf	Dest,W
+00734 0127 00F8 		movwf	Param78
+00735 0128 0831 		movf	Dest+1,W
+00736 0129 00F9 		movwf	Param79
+00737 012A 	;
+00738 012A 0832 		movf	CurPos,W
+00739 012B 00FC 		movwf	Param7C
+00740 012C 0833 		movf	CurPos+1,W
+00741 012D 00FD 		movwf	Param7D
+00742 012E 	;
+00743 012E 21EF 		call	Param7D_LE_Param79
+00744 012F 1C77 		btfss	Param77,0	;CurPos<=Dest?
+00745 0130 320C 		bra	Move_It_Neg	; No, CurPos>Dest
+00746 0131 	;CurPos<Dest, so move CurPos positive
+00747 0131 3010 		movlw	SlewChangeRate
+00748 0132 07FC 		addwf	Param7C,F
+00749 0133 3000 		movlw	0x00
+00750 0134 3DFD 		addwfc	Param7D,F
+00751 0135 21EF 		call	Param7D_LE_Param79
+00752 0136 1C77 		btfss	Param77,0	;CurPos<=Dest Still?
+00753 0137 320D 		bra	Move_It_Dest	; No, CurPos>Dest
+00754 0138 				; Yes, CurPos+=SlewChangeRate
+00755 0138 	;
+00756 0138 	; make the calculated position the current position
+00757 0138 087C 	Move_It_New	movf	Param7C,W
+00758 0139 00B2 		movwf	CurPos
+00759 013A 087D 		movf	Param7D,W
+00760 013B 00B3 		movwf	CurPos+1
+00761 013C 320C 		bra	Move_It_Now
+00762 013D 	;
+00763 013D 	Move_It_Neg
+00764 013D 3010 		movlw	SlewChangeRate
+00765 013E 02FC 		subwf	Param7C,F
+00766 013F 3000 		movlw	0x00
+00767 0140 3BFD 		subwfb	Param7D,F
+00768 0141 21EF 		call	Param7D_LE_Param79
+00769 0142 1877 		btfsc	Param77,0	;CurPos<=Dest now?
+00770 0143 3201 		bra	Move_It_Dest	; Yes, CurPos<=Dest
+00771 0144 33F3 		bra	Move_It_New
+00772 0145 	;
+00773 0145 	; make the current position the destination
+00774 0145 0830 	Move_It_Dest	movf	Dest,W
+00775 0146 00B2 		movwf	CurPos
+00776 0147 0831 		movf	Dest+1,W
+00777 0148 00B3 		movwf	CurPos+1
+00778 0149 	;
+00779 0149 	Move_It_Now:
+00780 0149 0832 		movf	CurPos,W
+00781 014A 00FC 		movwf	Param7C
 RocketServo.asm                                                       Page: 9
 /Users/davidflynn/Projects/Rocket-Servo/Firmware Rev B/
 
-00781 014B 00FC 		movwf	Param7C
-00782 014C 0833 		movf	CurPos+1,W
-00783 014D 00FD 		movwf	Param7D
-00784 014E 2150 		CALL	Copy7CToSig
-00785 014F 	Move_End:
-00786 014F 	;
-00787 014F 28C5 		goto	MainLoop
-00788 0150 	;
-00789 0150 	;========================================================================================
-00790 0150 	; Param7D:Param7C >> SigOutTimeH:SigOutTime
-00791 0150 	; Entry: Param7D:Param7C
-00792 0150 	;
-00793 0150 	; Don't disable interrupts if you don't need to...
-00794 0150 	; If Param7D:Param7C == SigOutTimeH:SigOutTime then return
-00795 0150 087C 	Copy7CToSig	MOVF	Param7C,W
-00796 0151 0270 		SUBWF	SigOutTime,W
-00797 0152 		SKPZ
-00797 0152 1D03      M		BTFSS	STATUS,Z		BTFSS	STATUS,Z
-00798 0153 2958 		GOTO	Copy7CToSig_1
-00799 0154 087D 		MOVF	Param7D,W
-00800 0155 0271 		SUBWF	SigOutTimeH,W
-00801 0156 		SKPNZ
-00801 0156 1903      M		BTFSC	STATUS,Z		BTFSC	STATUS,Z
-00802 0157 0008 		Return
-00803 0158 	;
-00804 0158 	;SigOutTimeH:SigOutTime = Param7D:Param7C
-00805 0158 138B 	Copy7CToSig_1	bcf	INTCON,GIE
-00806 0159 1B8B 		btfsc	INTCON,GIE
-00807 015A 33FD 		bra	Copy7CToSig_1
-00808 015B 087C 		MOVF	Param7C,W
-00809 015C 00F0 		MOVWF	SigOutTime
-00810 015D 087D 		MOVF	Param7D,W
-00811 015E 00F1 		MOVWF	SigOutTimeH
-00812 015F 178B 		bsf	INTCON,GIE
-00813 0160 	;
-00814 0160 0008 		RETURN
-00815 0161 	;
-00816 0161 	;=========================================================================
-00817 0161 	;
-00818 0161 1EF2 	CopyTempToPos	btfss	SMRevFlag
-00819 0162 321B 		bra	CopyTempToPos1
-00820 0163 321F 		bra	CopyTempToPos2
-00821 0164 	;
-00822 0164 1EF2 	CopyPosToTemp	btfss	SMRevFlag
-00823 0165 320E 		bra	CopyPos1ToTemp
-00824 0166 3212 		bra	CopyPos2ToTemp
-00825 0167 	;
-00826 0167 1EF2 	CopyPosToDest	btfss	SMRevFlag
-00827 0168 3201 		bra	CopyPos1ToDest
-00828 0169 3205 		bra	CopyPos2ToDest
-00829 016A 	;
-00830 016A 	;====================================
-00831 016A 	;
-00832 016A 0835 	CopyPos1ToDest	movf	Position1+1,W
-00833 016B 00B1 		movwf	Dest+1
-00834 016C 0834 		movf	Position1,W
-00835 016D 00B0 		movwf	Dest
-00836 016E 0008 		return
-00837 016F 	;
-00838 016F 	;=====================================
-00839 016F 	;
-00840 016F 0837 	CopyPos2ToDest	movf	Position2+1,W
-00841 0170 00B1 		movwf	Dest+1
-00842 0171 0836 		movf	Position2,W
-00843 0172 00B0 		movwf	Dest
-00844 0173 0008 		return
-00845 0174 	;
-00846 0174 	;====================================
-00847 0174 	;
-00848 0174 0835 	CopyPos1ToTemp	movf	Position1+1,W
-00849 0175 00FD 		movwf	Param7D
-00850 0176 0834 		movf	Position1,W
-00851 0177 00FC 		movwf	Param7C
-00852 0178 0008 		return
-00853 0179 	;
-00854 0179 	;=====================================
-00855 0179 	;
-00856 0179 0837 	CopyPos2ToTemp	movf	Position2+1,W
-00857 017A 00FD 		movwf	Param7D
-00858 017B 0836 		movf	Position2,W
-00859 017C 00FC 		movwf	Param7C
-00860 017D 0008 		return
-00861 017E 	;
-00862 017E 	;=====================================
-00863 017E 	;
-00864 017E 087D 	CopyTempToPos1	movf	Param7D,W
-00865 017F 00B5 		movwf	Position1+1
-00866 0180 087C 		movf	Param7C,W
-00867 0181 00B4 		movwf	Position1
-00868 0182 0008 		return
-00869 0183 	;
-00870 0183 087D 	CopyTempToPos2	movf	Param7D,W
-00871 0184 00B7 		movwf	Position2+1
-00872 0185 087C 		movf	Param7C,W
-00873 0186 00B6 		movwf	Position2
-00874 0187 0008 		return
-00875 0188 	;
-00876 0188 	;=========================================================================================
-00877 0188 	;=========================================================================================
+00782 014B 0833 		movf	CurPos+1,W
+00783 014C 00FD 		movwf	Param7D
+00784 014D 214F 		CALL	Copy7CToSig
+00785 014E 	Move_End:
+00786 014E 	;
+00787 014E 28C5 		goto	MainLoop
+00788 014F 	;
+00789 014F 	;========================================================================================
+00790 014F 	; Param7D:Param7C >> SigOutTimeH:SigOutTime
+00791 014F 	; Entry: Param7D:Param7C
+00792 014F 	;
+00793 014F 	; Don't disable interrupts if you don't need to...
+00794 014F 	; If Param7D:Param7C == SigOutTimeH:SigOutTime then return
+00795 014F 087C 	Copy7CToSig	MOVF	Param7C,W
+00796 0150 0270 		SUBWF	SigOutTime,W
+00797 0151 		SKPZ
+00797 0151 1D03      M		BTFSS	STATUS,Z		BTFSS	STATUS,Z
+00798 0152 2957 		GOTO	Copy7CToSig_1
+00799 0153 087D 		MOVF	Param7D,W
+00800 0154 0271 		SUBWF	SigOutTimeH,W
+00801 0155 		SKPNZ
+00801 0155 1903      M		BTFSC	STATUS,Z		BTFSC	STATUS,Z
+00802 0156 0008 		Return
+00803 0157 	;
+00804 0157 	;SigOutTimeH:SigOutTime = Param7D:Param7C
+00805 0157 138B 	Copy7CToSig_1	bcf	INTCON,GIE
+00806 0158 1B8B 		btfsc	INTCON,GIE
+00807 0159 33FD 		bra	Copy7CToSig_1
+00808 015A 087C 		MOVF	Param7C,W
+00809 015B 00F0 		MOVWF	SigOutTime
+00810 015C 087D 		MOVF	Param7D,W
+00811 015D 00F1 		MOVWF	SigOutTimeH
+00812 015E 178B 		bsf	INTCON,GIE
+00813 015F 	;
+00814 015F 0008 		RETURN
+00815 0160 	;
+00816 0160 	;=========================================================================
+00817 0160 	;
+00818 0160 1EF2 	CopyTempToPos	btfss	SMRevFlag
+00819 0161 321B 		bra	CopyTempToPos1
+00820 0162 321F 		bra	CopyTempToPos2
+00821 0163 	;
+00822 0163 1EF2 	CopyPosToTemp	btfss	SMRevFlag
+00823 0164 320E 		bra	CopyPos1ToTemp
+00824 0165 3212 		bra	CopyPos2ToTemp
+00825 0166 	;
+00826 0166 1EF2 	CopyPosToDest	btfss	SMRevFlag
+00827 0167 3201 		bra	CopyPos1ToDest
+00828 0168 3205 		bra	CopyPos2ToDest
+00829 0169 	;
+00830 0169 	;====================================
+00831 0169 	;
+00832 0169 0835 	CopyPos1ToDest	movf	Position1+1,W
+00833 016A 00B1 		movwf	Dest+1
+00834 016B 0834 		movf	Position1,W
+00835 016C 00B0 		movwf	Dest
+00836 016D 0008 		return
+00837 016E 	;
+00838 016E 	;=====================================
+00839 016E 	;
+00840 016E 0837 	CopyPos2ToDest	movf	Position2+1,W
+00841 016F 00B1 		movwf	Dest+1
+00842 0170 0836 		movf	Position2,W
+00843 0171 00B0 		movwf	Dest
+00844 0172 0008 		return
+00845 0173 	;
+00846 0173 	;====================================
+00847 0173 	;
+00848 0173 0835 	CopyPos1ToTemp	movf	Position1+1,W
+00849 0174 00FD 		movwf	Param7D
+00850 0175 0834 		movf	Position1,W
+00851 0176 00FC 		movwf	Param7C
+00852 0177 0008 		return
+00853 0178 	;
+00854 0178 	;=====================================
+00855 0178 	;
+00856 0178 0837 	CopyPos2ToTemp	movf	Position2+1,W
+00857 0179 00FD 		movwf	Param7D
+00858 017A 0836 		movf	Position2,W
+00859 017B 00FC 		movwf	Param7C
+00860 017C 0008 		return
+00861 017D 	;
+00862 017D 	;=====================================
+00863 017D 	;
+00864 017D 087D 	CopyTempToPos1	movf	Param7D,W
+00865 017E 00B5 		movwf	Position1+1
+00866 017F 087C 		movf	Param7C,W
+00867 0180 00B4 		movwf	Position1
+00868 0181 0008 		return
+00869 0182 	;
+00870 0182 087D 	CopyTempToPos2	movf	Param7D,W
+00871 0183 00B7 		movwf	Position2+1
+00872 0184 087C 		movf	Param7C,W
+00873 0185 00B6 		movwf	Position2
+00874 0186 0008 		return
+00875 0187 	;
+00876 0187 	;=========================================================================================
+00877 0187 	;=========================================================================================
+00878 0187 	; Setup or Read AN0
 RocketServo.asm                                                       Page: 10
 /Users/davidflynn/Projects/Rocket-Servo/Firmware Rev B/
 
-00878 0188 	; Setup or Read AN0
-00879 0188 	; Exit: 10bit analog in 7D:7C
-00880 0188 	;
-00881 0188 01FC 	ReadAN0	CLRF	Param7C
-00882 0189 01FD 		CLRF	Param7D
-00883 018A 0021 		MOVLB	1	;bank 1
-00884 018B 1C1D 		BTFSS	ADCON0,ADON	;Is the Analog input ON?
-00885 018C 2996 		GOTO	ReadAN0_ColdStart	; No, go start it
-00886 018D 189D 	ReadAN0_L1	BTFSC	ADCON0,NOT_DONE	;Conversion done?
-00887 018E 33FE 		BRA	ReadAN0_L1	; No
-00888 018F 081C 		MOVF	ADRESH,W
-00889 0190 00FD 		MOVWF	Param7D
-00890 0191 081B 		MOVF	ADRESL,W
-00891 0192 00FC 		MOVWF	Param7C
-00892 0193 149D 		BSF	ADCON0,ADGO	;Start next conversion.
-00893 0194 0020 		MOVLB	0	;bank 0
-00894 0195 0008 		RETURN
-00895 0196 	;
-00896 0196 0021 	ReadAN0_ColdStart	MOVLB	1	;bank 1
-00897 0197 30A0 		MOVLW	0xA0	;Right Just fosc/32
-00898 0198 009E 		MOVWF	ADCON1
-00899 0199 3001 		MOVLW	b'00000001'	;Select AN0
-00900 019A 009D 		MOVWF	ADCON0
-00901 019B 149D 		BSF	ADCON0,GO
-00902 019C 0020 	ReadAN0_Rtn	MOVLB	0	;bank 0
-00903 019D 0008 		Return
-00904 019E 	;
-00905 019E 	;=========================================================================================
-00906 019E 	;=========================================================================================
-00907 019E 	; Set CCP1 to go high is 0x100 clocks
-00908 019E 	;
-00909 019E 0020 	StartServo	MOVLB	0	;bank 0
-00910 019F 1E72 		BTFSS	ServoOff
-00911 01A0 0008 		RETURN
-00912 01A1 1272 		BCF	ServoOff
-00913 01A2 	;
-00914 01A2 08AE 	SS_Start_Loop	movf	Timer4Lo,F
-00915 01A3 		SKPZ
-00915 01A3 1D03      M		BTFSS	STATUS,Z		BTFSS	STATUS,Z
-00916 01A4 33FD 		bra	SS_Start_Loop
-00917 01A5 	;
-00918 01A5 	; Initialize to normal position
-00919 01A5 0020 	SS_CmdNormal	movlb	0	;Bank 0
-00920 01A6 12F2 		bcf	SMRevFlag
-00921 01A7 1172 		bcf	LED2Flag
-00922 01A8 	;
-00923 01A8 2167 	SS_Move_It	call	CopyPosToDest
-00924 01A9 21C8 		call	SetDestAsCur
-00925 01AA 2150 		CALL	Copy7CToSig
-00926 01AB 	;
-00927 01AB 3000 		MOVLW	0x00	;start in 0x100 clocks
-00928 01AC 0096 		MOVWF	TMR1L
-00929 01AD 30FF 		MOVLW	0xFF
-00930 01AE 0097 		MOVWF	TMR1H
-00931 01AF 	;
-00932 01AF 0025 		MOVLB	0x05                   ;Bank 5
-00933 01B0 0192 		CLRF	CCPR1H
-00934 01B1 0191 		CLRF	CCPR1L
-00935 01B2 3008 		MOVLW	CCP1CON_Set
-00936 01B3 0093 		MOVWF	CCP1CON	;go high on match
-00937 01B4 0020 		MOVLB	0x00	;Bank 0
-00938 01B5 302C 		movlw	low .300	;Do nothing for 3 seconds
-00939 01B6 00AE 		movwf	Timer4Lo
-00940 01B7 3001 		movlw	high .300
-00941 01B8 00AF 		movwf	Timer4Hi
-00942 01B9 302C 		movlw	Low ServoMoveTime	;At power up move to commanded position
-00943 01BA 00AA 		movwf	Timer2Lo
-00944 01BB 3001 		movlw	High ServoMoveTime
-00945 01BC 00AB 		movwf	Timer2Hi
-00946 01BD 1138 		bcf	InPosition
-00947 01BE 0008 		RETURN
-00948 01BF 	;
-00949 01BF 	;=========================================================================================
-00950 01BF 	;
-00951 01BF 30B8 	SetMiddlePosition	MOVLW	LOW kMidPulseWidth
-00952 01C0 00FC 		MOVWF	Param7C
-00953 01C1 00B0 		movwf	Dest
-00954 01C2 00B2 		movwf	CurPos
-00955 01C3 300B 		MOVLW	HIGH kMidPulseWidth
-00956 01C4 00FD 		MOVWF	Param7D
-00957 01C5 00B1 		movwf	Dest+1
-00958 01C6 00B3 		movwf	CurPos+1
-00959 01C7 0008 		Return
-00960 01C8 	;
-00961 01C8 	;=========================================================================================
-00962 01C8 	;
-00963 01C8 0830 	SetDestAsCur	movf	Dest,W
-00964 01C9 00FC 		MOVWF	Param7C
-00965 01CA 00B2 		movwf	CurPos
-00966 01CB 0831 		movf	Dest+1,W
-00967 01CC 00FD 		MOVWF	Param7D
-00968 01CD 00B3 		movwf	CurPos+1
-00969 01CE 0008 		Return
-00970 01CF 	;
-00971 01CF 	;=========================================================================================
-00972 01CF 	; ClampInt(Param7D:Param7C,kMinPulseWidth,kMaxPulseWidth)
-00973 01CF 	;
-00974 01CF 	; Entry: Param7D:Param7C
-00975 01CF 	; Exit: Param7D:Param7C=ClampInt(Param7D:Param7C,kMinPulseWidth,kMaxPulseWidth)
+00879 0187 	; Exit: 10bit analog in 7D:7C
+00880 0187 	;
+00881 0187 01FC 	ReadAN0	CLRF	Param7C
+00882 0188 01FD 		CLRF	Param7D
+00883 0189 0021 		MOVLB	1	;bank 1
+00884 018A 1C1D 		BTFSS	ADCON0,ADON	;Is the Analog input ON?
+00885 018B 2995 		GOTO	ReadAN0_ColdStart	; No, go start it
+00886 018C 189D 	ReadAN0_L1	BTFSC	ADCON0,NOT_DONE	;Conversion done?
+00887 018D 33FE 		BRA	ReadAN0_L1	; No
+00888 018E 081C 		MOVF	ADRESH,W
+00889 018F 00FD 		MOVWF	Param7D
+00890 0190 081B 		MOVF	ADRESL,W
+00891 0191 00FC 		MOVWF	Param7C
+00892 0192 149D 		BSF	ADCON0,ADGO	;Start next conversion.
+00893 0193 0020 		MOVLB	0	;bank 0
+00894 0194 0008 		RETURN
+00895 0195 	;
+00896 0195 0021 	ReadAN0_ColdStart	MOVLB	1	;bank 1
+00897 0196 30A0 		MOVLW	0xA0	;Right Just fosc/32
+00898 0197 009E 		MOVWF	ADCON1
+00899 0198 3001 		MOVLW	b'00000001'	;Select AN0
+00900 0199 009D 		MOVWF	ADCON0
+00901 019A 149D 		BSF	ADCON0,GO
+00902 019B 0020 	ReadAN0_Rtn	MOVLB	0	;bank 0
+00903 019C 0008 		Return
+00904 019D 	;
+00905 019D 	;=========================================================================================
+00906 019D 	;=========================================================================================
+00907 019D 	; Set CCP1 to go high is 0x100 clocks
+00908 019D 	;
+00909 019D 0020 	StartServo	MOVLB	0	;bank 0
+00910 019E 1E72 		BTFSS	ServoOff
+00911 019F 0008 		RETURN
+00912 01A0 1272 		BCF	ServoOff
+00913 01A1 	;
+00914 01A1 08AE 	SS_Start_Loop	movf	Timer4Lo,F
+00915 01A2 		SKPZ
+00915 01A2 1D03      M		BTFSS	STATUS,Z		BTFSS	STATUS,Z
+00916 01A3 33FD 		bra	SS_Start_Loop
+00917 01A4 	;
+00918 01A4 	; Initialize to normal position
+00919 01A4 0020 	SS_CmdNormal	movlb	0	;Bank 0
+00920 01A5 12F2 		bcf	SMRevFlag
+00921 01A6 1172 		bcf	LED2Flag
+00922 01A7 	;
+00923 01A7 2166 	SS_Move_It	call	CopyPosToDest
+00924 01A8 21C7 		call	SetDestAsCur
+00925 01A9 214F 		CALL	Copy7CToSig
+00926 01AA 	;
+00927 01AA 3000 		MOVLW	0x00	;start in 0x100 clocks
+00928 01AB 0096 		MOVWF	TMR1L
+00929 01AC 30FF 		MOVLW	0xFF
+00930 01AD 0097 		MOVWF	TMR1H
+00931 01AE 	;
+00932 01AE 0025 		MOVLB	0x05                   ;Bank 5
+00933 01AF 0192 		CLRF	CCPR1H
+00934 01B0 0191 		CLRF	CCPR1L
+00935 01B1 3008 		MOVLW	CCP1CON_Set
+00936 01B2 0093 		MOVWF	CCP1CON	;go high on match
+00937 01B3 0020 		MOVLB	0x00	;Bank 0
+00938 01B4 302C 		movlw	low .300	;Do nothing for 3 seconds
+00939 01B5 00AE 		movwf	Timer4Lo
+00940 01B6 3001 		movlw	high .300
+00941 01B7 00AF 		movwf	Timer4Hi
+00942 01B8 302C 		movlw	Low ServoMoveTime	;At power up move to commanded position
+00943 01B9 00AA 		movwf	Timer2Lo
+00944 01BA 3001 		movlw	High ServoMoveTime
+00945 01BB 00AB 		movwf	Timer2Hi
+00946 01BC 1138 		bcf	InPosition
+00947 01BD 0008 		RETURN
+00948 01BE 	;
+00949 01BE 	;=========================================================================================
+00950 01BE 	;
+00951 01BE 30B8 	SetMiddlePosition	MOVLW	LOW kMidPulseWidth
+00952 01BF 00FC 		MOVWF	Param7C
+00953 01C0 00B0 		movwf	Dest
+00954 01C1 00B2 		movwf	CurPos
+00955 01C2 300B 		MOVLW	HIGH kMidPulseWidth
+00956 01C3 00FD 		MOVWF	Param7D
+00957 01C4 00B1 		movwf	Dest+1
+00958 01C5 00B3 		movwf	CurPos+1
+00959 01C6 0008 		Return
+00960 01C7 	;
+00961 01C7 	;=========================================================================================
+00962 01C7 	;
+00963 01C7 0830 	SetDestAsCur	movf	Dest,W
+00964 01C8 00FC 		MOVWF	Param7C
+00965 01C9 00B2 		movwf	CurPos
+00966 01CA 0831 		movf	Dest+1,W
+00967 01CB 00FD 		MOVWF	Param7D
+00968 01CC 00B3 		movwf	CurPos+1
+00969 01CD 0008 		Return
+00970 01CE 	;
+00971 01CE 	;=========================================================================================
+00972 01CE 	; ClampInt(Param7D:Param7C,kMinPulseWidth,kMaxPulseWidth)
+00973 01CE 	;
+00974 01CE 	; Entry: Param7D:Param7C
+00975 01CE 	; Exit: Param7D:Param7C=ClampInt(Param7D:Param7C,kMinPulseWidth,kMaxPulseWidth)
+00976 01CE 	;
 RocketServo.asm                                                       Page: 11
 /Users/davidflynn/Projects/Rocket-Servo/Firmware Rev B/
 
-00976 01CF 	;
-00977 01CF 3010 	ClampInt	MOVLW	high kMaxPulseWidth
-00978 01D0 027D 		SUBWF	Param7D,W	;7D-kMaxPulseWidth
-00979 01D1 		SKPNB		;7D<Max?
-00979 01D1 1C03      M		BTFSS	STATUS,C		BTFSS	STATUS,C
-00980 01D2 29DC 		GOTO	ClampInt_1	; Yes
-00981 01D3 		SKPZ		;7D=Max?
-00981 01D3 1D03      M		BTFSS	STATUS,Z		BTFSS	STATUS,Z
-00982 01D4 29EB 		GOTO	ClampInt_tooHigh	; No, its greater.
-00983 01D5 3068 		MOVLW	low kMaxPulseWidth	; Yes, MSB was equal check LSB
-00984 01D6 027C 		SUBWF	Param7C,W	;7C-kMaxPulseWidth
-00985 01D7 		SKPNZ		;=kMaxPulseWidth
-00985 01D7 1903      M		BTFSC	STATUS,Z		BTFSC	STATUS,Z
-00986 01D8 0008 		RETURN		;Yes
-00987 01D9 		SKPB		;7C<Max?
-00987 01D9 1803      M		BTFSC	STATUS,C		BTFSC	STATUS,C
-00988 01DA 29EB 		GOTO	ClampInt_tooHigh	; No
-00989 01DB 0008 		RETURN		; Yes
-00990 01DC 	;
-00991 01DC 3007 	ClampInt_1	MOVLW	high kMinPulseWidth
-00992 01DD 027D 		SUBWF	Param7D,W	;7D-kMinPulseWidth
-00993 01DE 		SKPNB		;7D<Min?
-00993 01DE 1C03      M		BTFSS	STATUS,C		BTFSS	STATUS,C
-00994 01DF 29E6 		GOTO	ClampInt_tooLow	; Yes
-00995 01E0 		SKPZ		;=Min?
-00995 01E0 1D03      M		BTFSS	STATUS,Z		BTFSS	STATUS,Z
-00996 01E1 0008 		RETURN		; No, 7D>kMinPulseWidth
-00997 01E2 3008 		MOVLW	low kMinPulseWidth	; Yes, MSB is a match
-00998 01E3 027C 		SUBWF	Param7C,W	;7C-kMinPulseWidth
-00999 01E4 		SKPB		;7C>=Min?
-00999 01E4 1803      M		BTFSC	STATUS,C		BTFSC	STATUS,C
-01000 01E5 0008 		RETURN		; Yes
-01001 01E6 	;
-01002 01E6 3008 	ClampInt_tooLow	MOVLW	low kMinPulseWidth
-01003 01E7 00FC 		MOVWF	Param7C
-01004 01E8 3007 		MOVLW	high kMinPulseWidth
-01005 01E9 00FD 		MOVWF	Param7D
-01006 01EA 0008 		RETURN
-01007 01EB 	;
-01008 01EB 3068 	ClampInt_tooHigh	MOVLW	low kMaxPulseWidth
-01009 01EC 00FC 		MOVWF	Param7C
-01010 01ED 3010 		MOVLW	high kMaxPulseWidth
-01011 01EE 00FD 		MOVWF	Param7D
-01012 01EF 0008 		RETURN
-01013 01F0 	;
-01014 01F0 	;=====================================================================================
-01015 01F0 	; Less or Equal
-01016 01F0 	;
-01017 01F0 	; Entry: Param7D:Param7C, Param79:Param78
-01018 01F0 	; Exit: Param77:0=Param7D:Param7C<=Param79:Param78
-01019 01F0 	;
-01020 01F0 01F7 	Param7D_LE_Param79	CLRF	Param77	;default to >
-01021 01F1 0879 		MOVF	Param79,W
-01022 01F2 027D 		SUBWF	Param7D,W	;Param7D-Param79
-01023 01F3 		SKPNB		;Param7D<Param79?
-01023 01F3 1C03      M		BTFSS	STATUS,C		BTFSS	STATUS,C
-01024 01F4 29FD 		GOTO	SetTrue	; Yes
-01025 01F5 		SKPZ		;Param7D>Param79?
-01025 01F5 1D03      M		BTFSS	STATUS,Z		BTFSS	STATUS,Z
-01026 01F6 0008 		RETURN		; Yes
-01027 01F7 0878 		MOVF	Param78,W	; No, MSB is a match
-01028 01F8 027C 		SUBWF	Param7C,W	;Param7C-Param78
-01029 01F9 		SKPNB		;Param7C<Param78?
-01029 01F9 1C03      M		BTFSS	STATUS,C		BTFSS	STATUS,C
-01030 01FA 29FD 		GOTO	SetTrue	; Yes
-01031 01FB 		SKPZ		;LSBs then same?
-01031 01FB 1D03      M		BTFSS	STATUS,Z		BTFSS	STATUS,Z
-01032 01FC 0008 		RETURN		; No
-01033 01FD 	;
-01034 01FD 1477 	SetTrue	BSF	Param77,0
-01035 01FE 0008 		RETURN
-01036 01FF 	;
-01037 01FF 		if oldCode
-01136 01FF 		endif
-01137 01FF 	;=============================================================================================
-01138 01FF 	;==============================================================================================
-01139 01FF 	;
-01140 01FF 		include	F1822_Common.inc
-00001 01FF 	;=========================================================================================
-00002 01FF 	; Commonly used routines PIC16F1822 version
-00003 01FF 	;
-00004 01FF 	;    Filename:      F1822 Common.inc
-00005 01FF 	;    Date:          9/4/2014
-00006 01FF 	;    File Version:  1.0.1
-00007 01FF 	;
-00008 01FF 	;    Author:        David M. Flynn
-00009 01FF 	;    Company:       Oxford V.U.E., Inc.
-00010 01FF 	;    E-Mail:        dflynn@oxfordvue.com
-00011 01FF 	;    Web Site:      http://www.oxfordvue.com/
-00012 01FF 	;
-00013 01FF 	;=========================================================================================
-00014 01FF 	;    History:
-00015 01FF 	;
-00016 01FF 	; 1.0.1 9/4/2014	Updated from F1847 Common.inc
-00017 01FF 	; 1.0   11/16/2013	Updated from F648A Common.inc
-00018 01FF 	;
-00019 01FF 	;=========================================================================================
-00020 01FF 	; Routines:
-00021 01FF 	;
+00977 01CE 3010 	ClampInt	MOVLW	high kMaxPulseWidth
+00978 01CF 027D 		SUBWF	Param7D,W	;7D-kMaxPulseWidth
+00979 01D0 		SKPNB		;7D<Max?
+00979 01D0 1C03      M		BTFSS	STATUS,C		BTFSS	STATUS,C
+00980 01D1 29DB 		GOTO	ClampInt_1	; Yes
+00981 01D2 		SKPZ		;7D=Max?
+00981 01D2 1D03      M		BTFSS	STATUS,Z		BTFSS	STATUS,Z
+00982 01D3 29EA 		GOTO	ClampInt_tooHigh	; No, its greater.
+00983 01D4 3068 		MOVLW	low kMaxPulseWidth	; Yes, MSB was equal check LSB
+00984 01D5 027C 		SUBWF	Param7C,W	;7C-kMaxPulseWidth
+00985 01D6 		SKPNZ		;=kMaxPulseWidth
+00985 01D6 1903      M		BTFSC	STATUS,Z		BTFSC	STATUS,Z
+00986 01D7 0008 		RETURN		;Yes
+00987 01D8 		SKPB		;7C<Max?
+00987 01D8 1803      M		BTFSC	STATUS,C		BTFSC	STATUS,C
+00988 01D9 29EA 		GOTO	ClampInt_tooHigh	; No
+00989 01DA 0008 		RETURN		; Yes
+00990 01DB 	;
+00991 01DB 3007 	ClampInt_1	MOVLW	high kMinPulseWidth
+00992 01DC 027D 		SUBWF	Param7D,W	;7D-kMinPulseWidth
+00993 01DD 		SKPNB		;7D<Min?
+00993 01DD 1C03      M		BTFSS	STATUS,C		BTFSS	STATUS,C
+00994 01DE 29E5 		GOTO	ClampInt_tooLow	; Yes
+00995 01DF 		SKPZ		;=Min?
+00995 01DF 1D03      M		BTFSS	STATUS,Z		BTFSS	STATUS,Z
+00996 01E0 0008 		RETURN		; No, 7D>kMinPulseWidth
+00997 01E1 3008 		MOVLW	low kMinPulseWidth	; Yes, MSB is a match
+00998 01E2 027C 		SUBWF	Param7C,W	;7C-kMinPulseWidth
+00999 01E3 		SKPB		;7C>=Min?
+00999 01E3 1803      M		BTFSC	STATUS,C		BTFSC	STATUS,C
+01000 01E4 0008 		RETURN		; Yes
+01001 01E5 	;
+01002 01E5 3008 	ClampInt_tooLow	MOVLW	low kMinPulseWidth
+01003 01E6 00FC 		MOVWF	Param7C
+01004 01E7 3007 		MOVLW	high kMinPulseWidth
+01005 01E8 00FD 		MOVWF	Param7D
+01006 01E9 0008 		RETURN
+01007 01EA 	;
+01008 01EA 3068 	ClampInt_tooHigh	MOVLW	low kMaxPulseWidth
+01009 01EB 00FC 		MOVWF	Param7C
+01010 01EC 3010 		MOVLW	high kMaxPulseWidth
+01011 01ED 00FD 		MOVWF	Param7D
+01012 01EE 0008 		RETURN
+01013 01EF 	;
+01014 01EF 	;=====================================================================================
+01015 01EF 	; Less or Equal
+01016 01EF 	;
+01017 01EF 	; Entry: Param7D:Param7C, Param79:Param78
+01018 01EF 	; Exit: Param77:0=Param7D:Param7C<=Param79:Param78
+01019 01EF 	;
+01020 01EF 01F7 	Param7D_LE_Param79	CLRF	Param77	;default to >
+01021 01F0 0879 		MOVF	Param79,W
+01022 01F1 027D 		SUBWF	Param7D,W	;Param7D-Param79
+01023 01F2 		SKPNB		;Param7D<Param79?
+01023 01F2 1C03      M		BTFSS	STATUS,C		BTFSS	STATUS,C
+01024 01F3 29FC 		GOTO	SetTrue	; Yes
+01025 01F4 		SKPZ		;Param7D>Param79?
+01025 01F4 1D03      M		BTFSS	STATUS,Z		BTFSS	STATUS,Z
+01026 01F5 0008 		RETURN		; Yes
+01027 01F6 0878 		MOVF	Param78,W	; No, MSB is a match
+01028 01F7 027C 		SUBWF	Param7C,W	;Param7C-Param78
+01029 01F8 		SKPNB		;Param7C<Param78?
+01029 01F8 1C03      M		BTFSS	STATUS,C		BTFSS	STATUS,C
+01030 01F9 29FC 		GOTO	SetTrue	; Yes
+01031 01FA 		SKPZ		;LSBs then same?
+01031 01FA 1D03      M		BTFSS	STATUS,Z		BTFSS	STATUS,Z
+01032 01FB 0008 		RETURN		; No
+01033 01FC 	;
+01034 01FC 1477 	SetTrue	BSF	Param77,0
+01035 01FD 0008 		RETURN
+01036 01FE 	;
+01037 01FE 		if oldCode
+01136 01FE 		endif
+01137 01FE 	;=============================================================================================
+01138 01FE 	;==============================================================================================
+01139 01FE 	;
+01140 01FE 		include	F1822_Common.inc
+00001 01FE 	;=========================================================================================
+00002 01FE 	; Commonly used routines PIC16F1822 version
+00003 01FE 	;
+00004 01FE 	;    Filename:      F1822 Common.inc
+00005 01FE 	;    Date:          9/4/2014
+00006 01FE 	;    File Version:  1.0.1
+00007 01FE 	;
+00008 01FE 	;    Author:        David M. Flynn
+00009 01FE 	;    Company:       Oxford V.U.E., Inc.
+00010 01FE 	;    E-Mail:        dflynn@oxfordvue.com
+00011 01FE 	;    Web Site:      http://www.oxfordvue.com/
+00012 01FE 	;
+00013 01FE 	;=========================================================================================
+00014 01FE 	;    History:
+00015 01FE 	;
+00016 01FE 	; 1.0.1 9/4/2014	Updated from F1847 Common.inc
+00017 01FE 	; 1.0   11/16/2013	Updated from F648A Common.inc
+00018 01FE 	;
+00019 01FE 	;=========================================================================================
+00020 01FE 	; Routines:
+00021 01FE 	;
+00022 01FE 	; ClearRam	(2+0) Clears all RAM, call once before initializing variables, FSR0
 RocketServo.asm                                                       Page: 12
 /Users/davidflynn/Projects/Rocket-Servo/Firmware Rev B/
 
-00022 01FF 	; ClearRam	(2+0) Clears all RAM, call once before initializing variables, FSR0
-00023 01FF 	; CopyToRam	(1+0) copy param memory (EEPROM) to ram, call once, FSR0
-00024 01FF 	; SaveParams	(1+0) copy ram to param memory (EEPROM), FSR0
-00025 01FF 	; TX_TheByte	(0+0) Send one byte to UART
-00026 01FF 	; RX_TheByte	(0+0) Receive one byte from UART
-00027 01FF 	;
-00028 01FF 	; DecTimer4	(0+0) Decrement routine for 16 bit timers, FSR0
-00029 01FF 	; DecTimer3
-00030 01FF 	; DecTimer2
-00031 01FF 	; DecTimer1
-00032 01FF 	;
-00033 01FF 	; TestT4_Zero	Test for 16 bit timers = zero
-00034 01FF 	; TestT3_Zero	If Timer is zero return Z flag,1 else Z=0
-00035 01FF 	; TestT2_Zero
-00036 01FF 	; TestT1_Zero
-00037 01FF 	;
-00038 01FF 	; Delay10uS	(0+0)Delay uS    1 cycle = 1uS, 8Mhz clock version
-00039 01FF 	; Delay100uS
-00040 01FF 	; Delay40uS
-00041 01FF 	; DelayWuS
-00042 01FF 	;
-00043 01FF 	; EEReadW	(0+0) Read EEPROM address in W
-00044 01FF 	; EERead	(0+0) Read EEPROM address in EEAddrTemp
-00045 01FF 	; EEWriteW	(0+0) Write EEPROM address in W, Data in EEDataTemp
-00046 01FF 	; EEWrite	(0+0) Write EEPROM address in EEAdrTemp, Data in EEDataTemp, FSR0
-00047 01FF 	;
-00048 01FF 	; StoreSerIn	Put the byte in W into the serial input buffer, FSR0
-00049 01FF 	; GetSerIn	Get a byte from the serial input buffer, FSR0
-00050 01FF 	; GetSerOutBytes	Get the number of bytes in the serial ouput buffer
-00051 01FF 	; StoreSerOut	Put the byte in W into the serial output buffer, FSR0
-00052 01FF 	; POP_SerOut	Remove the last char stored in the output buffer
-00053 01FF 	; GetSerOut	Get a byte from the serial Output buffer, FSR0
-00054 01FF 	;
-00055 01FF 	;=========================================================================================
-00056 01FF 	; Clears all RAM
-00057 01FF 	; Entry: none
-00058 01FF 	; Exit: none
-00059 01FF 	; RAM used: All
-00060 01FF 	; Calls:(2+0) ClearRam_L2
-00061 01FF 	;
-00062 01FF 0020 	ClearRam	MOVLB	0x00
-00063 0200 305F 		MOVLW	0x5F	;Clear 20h-7Eh, 95 bytes
-00064 0201 00FF 		MOVWF	Param7F
-00065 0202 3020 		MOVLW	0x20
-00066 0203 0084 		MOVWF	FSR0
-00067 0204 0185 		CLRF	FSR0H
-00068 0205 220A 		CALL	ClearRam_L2
-00069 0206 	;
-00070 0206 3020 		MOVLW	0x20	;Clear A0h-BFh, 32 bytes
-00071 0207 00FF 		MOVWF	Param7F
-00072 0208 30A0 		MOVLW	0xA0
-00073 0209 0084 		MOVWF	FSR0
-00074 020A 	;
-00075 020A 0180 	ClearRam_L2	CLRF	INDF0
-00076 020B 0A84 		INCF	FSR0,F
-00077 020C 0BFF 		DECFSZ	Param7F,F
-00078 020D 2A0A 		GOTO	ClearRam_L2
-00079 020E 0008 		RETURN
-00080 020F 	;
-00081 020F 	;==========================================================================
-00082 020F 	; copy param memory to ram
-00083 020F 	;
-00084 020F 	CopyToRam:
-00085 020F 0020  a		MOVLB	EEAddrTemp	;banksel
-00084 0210 		BankSel	EEAddrTemp
-00086 0210 3000 		MOVLW	nvFirstParamByte
-00087 0211 00A6 		MOVWF	EEAddrTemp
-00088 0212 3034 		MOVLW	FirstRAMParam
-00089 0213 0084 		MOVWF	FSR0
-00090 0214 0185 		CLRF	FSR0H
-00091 0215 2257 	CopyToRam_L1	CALL	EERead
-00092 0216 0080 		MOVWF	INDF0
-00093 0217 3038 		MOVLW	LastRAMParam
-00094 0218 0204 		SUBWF	FSR0,W
-00095 0219 		SKPNZ
-00095 0219 1903      M		BTFSC	STATUS,Z		BTFSC	STATUS,Z
-00096 021A 0008 		RETURN
-00097 021B 0A84 		INCF	FSR0,F
-00098 021C 0AA6 		INCF	EEAddrTemp,F
-00099 021D 2A15 		GOTO	CopyToRam_L1
-00100 021E 	;
-00101 021E 	;===========================================================================
-00102 021E 	; copy ram to param memory
-00103 021E 	;
-00104 021E 	SaveParams:
-00105 021E 0020  a		MOVLB	EEAddrTemp	;banksel
-00104 021F 		BankSel	EEAddrTemp
-00106 021F 3000 		MOVLW	nvFirstParamByte
-00107 0220 00A6 		MOVWF	EEAddrTemp
-00108 0221 3034 		MOVLW	FirstRAMParam
-00109 0222 0084 		MOVWF	FSR0
-00110 0223 0185 		CLRF	FSR0H
-00111 0224 0800 	SaveParams_L1	MOVF	INDF0,W
-00112 0225 00A7 		MOVWF	EEDataTemp
-00113 0226 2261 		CALL	EEWrite
-00114 0227 3038 		MOVLW	LastRAMParam	;last byte
-00115 0228 0204 		SUBWF	FSR0,W
-00116 0229 		SKPNZ
-00116 0229 1903      M		BTFSC	STATUS,Z		BTFSC	STATUS,Z
+00023 01FE 	; CopyToRam	(1+0) copy param memory (EEPROM) to ram, call once, FSR0
+00024 01FE 	; SaveParams	(1+0) copy ram to param memory (EEPROM), FSR0
+00025 01FE 	; TX_TheByte	(0+0) Send one byte to UART
+00026 01FE 	; RX_TheByte	(0+0) Receive one byte from UART
+00027 01FE 	;
+00028 01FE 	; DecTimer4	(0+0) Decrement routine for 16 bit timers, FSR0
+00029 01FE 	; DecTimer3
+00030 01FE 	; DecTimer2
+00031 01FE 	; DecTimer1
+00032 01FE 	;
+00033 01FE 	; TestT4_Zero	Test for 16 bit timers = zero
+00034 01FE 	; TestT3_Zero	If Timer is zero return Z flag,1 else Z=0
+00035 01FE 	; TestT2_Zero
+00036 01FE 	; TestT1_Zero
+00037 01FE 	;
+00038 01FE 	; Delay10uS	(0+0)Delay uS    1 cycle = 1uS, 8Mhz clock version
+00039 01FE 	; Delay100uS
+00040 01FE 	; Delay40uS
+00041 01FE 	; DelayWuS
+00042 01FE 	;
+00043 01FE 	; EEReadW	(0+0) Read EEPROM address in W
+00044 01FE 	; EERead	(0+0) Read EEPROM address in EEAddrTemp
+00045 01FE 	; EEWriteW	(0+0) Write EEPROM address in W, Data in EEDataTemp
+00046 01FE 	; EEWrite	(0+0) Write EEPROM address in EEAdrTemp, Data in EEDataTemp, FSR0
+00047 01FE 	;
+00048 01FE 	; StoreSerIn	Put the byte in W into the serial input buffer, FSR0
+00049 01FE 	; GetSerIn	Get a byte from the serial input buffer, FSR0
+00050 01FE 	; GetSerOutBytes	Get the number of bytes in the serial ouput buffer
+00051 01FE 	; StoreSerOut	Put the byte in W into the serial output buffer, FSR0
+00052 01FE 	; POP_SerOut	Remove the last char stored in the output buffer
+00053 01FE 	; GetSerOut	Get a byte from the serial Output buffer, FSR0
+00054 01FE 	;
+00055 01FE 	;=========================================================================================
+00056 01FE 	; Clears all RAM
+00057 01FE 	; Entry: none
+00058 01FE 	; Exit: none
+00059 01FE 	; RAM used: All
+00060 01FE 	; Calls:(2+0) ClearRam_L2
+00061 01FE 	;
+00062 01FE 0020 	ClearRam	MOVLB	0x00
+00063 01FF 305F 		MOVLW	0x5F	;Clear 20h-7Eh, 95 bytes
+00064 0200 00FF 		MOVWF	Param7F
+00065 0201 3020 		MOVLW	0x20
+00066 0202 0084 		MOVWF	FSR0
+00067 0203 0185 		CLRF	FSR0H
+00068 0204 2209 		CALL	ClearRam_L2
+00069 0205 	;
+00070 0205 3020 		MOVLW	0x20	;Clear A0h-BFh, 32 bytes
+00071 0206 00FF 		MOVWF	Param7F
+00072 0207 30A0 		MOVLW	0xA0
+00073 0208 0084 		MOVWF	FSR0
+00074 0209 	;
+00075 0209 0180 	ClearRam_L2	CLRF	INDF0
+00076 020A 0A84 		INCF	FSR0,F
+00077 020B 0BFF 		DECFSZ	Param7F,F
+00078 020C 2A09 		GOTO	ClearRam_L2
+00079 020D 0008 		RETURN
+00080 020E 	;
+00081 020E 	;==========================================================================
+00082 020E 	; copy param memory to ram
+00083 020E 	;
+00084 020E 	CopyToRam:
+00085 020E 0020  a		MOVLB	EEAddrTemp	;banksel
+00084 020F 		BankSel	EEAddrTemp
+00086 020F 3000 		MOVLW	nvFirstParamByte
+00087 0210 00A6 		MOVWF	EEAddrTemp
+00088 0211 3034 		MOVLW	FirstRAMParam
+00089 0212 0084 		MOVWF	FSR0
+00090 0213 0185 		CLRF	FSR0H
+00091 0214 2256 	CopyToRam_L1	CALL	EERead
+00092 0215 0080 		MOVWF	INDF0
+00093 0216 3038 		MOVLW	LastRAMParam
+00094 0217 0204 		SUBWF	FSR0,W
+00095 0218 		SKPNZ
+00095 0218 1903      M		BTFSC	STATUS,Z		BTFSC	STATUS,Z
+00096 0219 0008 		RETURN
+00097 021A 0A84 		INCF	FSR0,F
+00098 021B 0AA6 		INCF	EEAddrTemp,F
+00099 021C 2A14 		GOTO	CopyToRam_L1
+00100 021D 	;
+00101 021D 	;===========================================================================
+00102 021D 	; copy ram to param memory
+00103 021D 	;
+00104 021D 	SaveParams:
+00105 021D 0020  a		MOVLB	EEAddrTemp	;banksel
+00104 021E 		BankSel	EEAddrTemp
+00106 021E 3000 		MOVLW	nvFirstParamByte
+00107 021F 00A6 		MOVWF	EEAddrTemp
+00108 0220 3034 		MOVLW	FirstRAMParam
+00109 0221 0084 		MOVWF	FSR0
+00110 0222 0185 		CLRF	FSR0H
+00111 0223 0800 	SaveParams_L1	MOVF	INDF0,W
+00112 0224 00A7 		MOVWF	EEDataTemp
+00113 0225 2260 		CALL	EEWrite
+00114 0226 3038 		MOVLW	LastRAMParam	;last byte
+00115 0227 0204 		SUBWF	FSR0,W
+00116 0228 		SKPNZ
+00116 0228 1903      M		BTFSC	STATUS,Z		BTFSC	STATUS,Z
+00117 0229 0008 		RETURN
 RocketServo.asm                                                       Page: 13
 /Users/davidflynn/Projects/Rocket-Servo/Firmware Rev B/
 
-00117 022A 0008 		RETURN
-00118 022B 0A84 		INCF	FSR0,F
-00119 022C 0AA6 		INCF	EEAddrTemp,F
-00120 022D 2A24 		GOTO	SaveParams_L1
-00121 022E 	;
-00122 022E 	;=====================================================================================================
-00123 022E 	;=========================================================================================================
-00124 022E 	; Decrement routine for 16 bit timers
-00125 022E 	;
-00126 022E 302F 	DecTimer4	movlw	Timer4Hi
-00127 022F 2A35 		goto	DecTimer
-00128 0230 302D 	DecTimer3	movlw	Timer3Hi
-00129 0231 2A35 		goto	DecTimer
-00130 0232 302B 	DecTimer2	movlw	Timer2Hi
-00131 0233 2A35 		goto	DecTimer
-00132 0234 3029 	DecTimer1	movlw	Timer1Hi
-00133 0235 	;DecTimer
-00134 0235 	; entry: FSR=Timer(n)Hi
-00135 0235 0084 	DecTimer	MOVWF	FSR0L
-00136 0236 0185 		CLRF	FSR0H	;Timers must be in bank 0
-00137 0237 0013 		moviw	FSR0--	;TimerNHi
-00138 0238 0400 		IORWF	INDF0,W	;TimerNLo
-00139 0239 		SKPNZ
-00139 0239 1903      M		BTFSC	STATUS,Z		BTFSC	STATUS,Z
-00140 023A 0008 		RETURN
-00141 023B 3001 		MOVLW	0x01
-00142 023C 0280 		SUBWF	INDF0,F	;TimerNLo
-00143 023D 0A84 		INCF	FSR0L,F
-00144 023E 3000 		MOVLW	0x00
-00145 023F 3B80 		SUBWFB	INDF0,F	;TimerNHi
-00146 0240 0008 		RETURN
-00147 0241 	;
-00148 0241 	;==============================================================================================
-00149 0241 	; Test for 16 bit timers = zero
-00150 0241 	;If Timer is zero return Z flag,1 else Z=0
-00151 0241 	;
-00152 0241 082E 	TestT4_Zero	movf	Timer4Lo,W
-00153 0242 042F 		iorwf	Timer4Hi,W
-00154 0243 0008 		return
-00155 0244 	;
-00156 0244 082C 	TestT3_Zero	movf	Timer3Lo,W
-00157 0245 042D 		iorwf	Timer3Hi,W
-00158 0246 0008 		return
-00159 0247 	;
-00160 0247 082A 	TestT2_Zero	movf	Timer2Lo,W
-00161 0248 042B 		iorwf	Timer2Hi,W
-00162 0249 0008 		return
-00163 024A 	;
-00164 024A 0828 	TestT1_Zero	movf	Timer1Lo,W
-00165 024B 0429 		iorwf	Timer1Hi,W
-00166 024C 0008 		return
-00167 024D 	;
-00168 024D 	;======================================================================================
-00169 024D 	;Delay uS    1 cycle = 1uS, 8Mhz clock version
-00170 024D 	; RAM used: Param77
-00171 024D 	; Calls:(0) none
-00172 024D 3005 	Delay10uS	MOVLW	0x05	;(2*3+5)/2=10
-00173 024E 2A52 		GOTO	DelayWuS
-00174 024F 3041 	Delay100uS	MOVLW	d'65'	;(28*3+5)/2=100
-00175 0250 2A52 		GOTO	DelayWuS
-00176 0251 3019 	Delay40uS	MOVLW	d'25'	;(11*3+5)=40
-00177 0252 00F7 	DelayWuS	MOVWF	Param77
-00178 0253 0BF7 	DelayWuS_Loop	DECFSZ	Param77,F
-00179 0254 2A53 		GOTO	DelayWuS_Loop
-00180 0255 0008 		RETURN
-00181 0256 	;
-00182 0256 	;==============================================================================================
-00183 0256 	; Read EEPROM
-00184 0256 	; entry: EEPROM address to read in W
-00185 0256 	;        Bank 0 selected
-00186 0256 	; exit: W=EEDATA, Bank 0 selected
-00187 0256 	;
-00188 0256 00A6 	EEReadW	movwf	EEAddrTemp
-00189 0257 	;
-00190 0257 	;==============================================================================================
-00191 0257 	; Read EEPROM
-00192 0257 	; entry: EEPROM address to read in EEAddrTemp
-00193 0257 	;        Bank 0 selected
-00194 0257 	; exit: W=EEDATA, Bank 0 selected
-00195 0257 	;
-00196 0257 0826 	EERead	MOVF	EEAddrTemp,W	;Data Memory
-00197 0258 0023  a		MOVLB	EEADRL	;banksel
-00196 0259 		BANKSEL	EEADRL
-00198 0259 0091 		MOVWF	EEADRL	;Address to read
-00199 025A 	;
-00200 025A 1315 		BCF	EECON1,CFGS	;Deselect Config space
-00201 025B 1395 		BCF	EECON1,EEPGD	;Point to DATA memory
-00202 025C 1415 		BSF	EECON1,RD	;EE Read
-00203 025D 0813 		MOVF	EEDATL,W	;W = EEDATL
-00204 025E 0020 		MOVLB	0x00	;Bank 0
-00205 025F 0008 		return
-00206 0260 	;
-00207 0260 	;==============================================================================================
-00208 0260 	; Write EEPROM
-00209 0260 	; entry: EEPROM address to write in W
-00210 0260 	;        EEPROM data to write in EEDataTemp
-00211 0260 	;        Bank 0 selected
-00212 0260 	; exit: Bank 0 selected
-00213 0260 	;
+00118 022A 0A84 		INCF	FSR0,F
+00119 022B 0AA6 		INCF	EEAddrTemp,F
+00120 022C 2A23 		GOTO	SaveParams_L1
+00121 022D 	;
+00122 022D 	;=====================================================================================================
+00123 022D 	;=========================================================================================================
+00124 022D 	; Decrement routine for 16 bit timers
+00125 022D 	;
+00126 022D 302F 	DecTimer4	movlw	Timer4Hi
+00127 022E 2A34 		goto	DecTimer
+00128 022F 302D 	DecTimer3	movlw	Timer3Hi
+00129 0230 2A34 		goto	DecTimer
+00130 0231 302B 	DecTimer2	movlw	Timer2Hi
+00131 0232 2A34 		goto	DecTimer
+00132 0233 3029 	DecTimer1	movlw	Timer1Hi
+00133 0234 	;DecTimer
+00134 0234 	; entry: FSR=Timer(n)Hi
+00135 0234 0084 	DecTimer	MOVWF	FSR0L
+00136 0235 0185 		CLRF	FSR0H	;Timers must be in bank 0
+00137 0236 0013 		moviw	FSR0--	;TimerNHi
+00138 0237 0400 		IORWF	INDF0,W	;TimerNLo
+00139 0238 		SKPNZ
+00139 0238 1903      M		BTFSC	STATUS,Z		BTFSC	STATUS,Z
+00140 0239 0008 		RETURN
+00141 023A 3001 		MOVLW	0x01
+00142 023B 0280 		SUBWF	INDF0,F	;TimerNLo
+00143 023C 0A84 		INCF	FSR0L,F
+00144 023D 3000 		MOVLW	0x00
+00145 023E 3B80 		SUBWFB	INDF0,F	;TimerNHi
+00146 023F 0008 		RETURN
+00147 0240 	;
+00148 0240 	;==============================================================================================
+00149 0240 	; Test for 16 bit timers = zero
+00150 0240 	;If Timer is zero return Z flag,1 else Z=0
+00151 0240 	;
+00152 0240 082E 	TestT4_Zero	movf	Timer4Lo,W
+00153 0241 042F 		iorwf	Timer4Hi,W
+00154 0242 0008 		return
+00155 0243 	;
+00156 0243 082C 	TestT3_Zero	movf	Timer3Lo,W
+00157 0244 042D 		iorwf	Timer3Hi,W
+00158 0245 0008 		return
+00159 0246 	;
+00160 0246 082A 	TestT2_Zero	movf	Timer2Lo,W
+00161 0247 042B 		iorwf	Timer2Hi,W
+00162 0248 0008 		return
+00163 0249 	;
+00164 0249 0828 	TestT1_Zero	movf	Timer1Lo,W
+00165 024A 0429 		iorwf	Timer1Hi,W
+00166 024B 0008 		return
+00167 024C 	;
+00168 024C 	;======================================================================================
+00169 024C 	;Delay uS    1 cycle = 1uS, 8Mhz clock version
+00170 024C 	; RAM used: Param77
+00171 024C 	; Calls:(0) none
+00172 024C 3005 	Delay10uS	MOVLW	0x05	;(2*3+5)/2=10
+00173 024D 2A51 		GOTO	DelayWuS
+00174 024E 3041 	Delay100uS	MOVLW	d'65'	;(28*3+5)/2=100
+00175 024F 2A51 		GOTO	DelayWuS
+00176 0250 3019 	Delay40uS	MOVLW	d'25'	;(11*3+5)=40
+00177 0251 00F7 	DelayWuS	MOVWF	Param77
+00178 0252 0BF7 	DelayWuS_Loop	DECFSZ	Param77,F
+00179 0253 2A52 		GOTO	DelayWuS_Loop
+00180 0254 0008 		RETURN
+00181 0255 	;
+00182 0255 	;==============================================================================================
+00183 0255 	; Read EEPROM
+00184 0255 	; entry: EEPROM address to read in W
+00185 0255 	;        Bank 0 selected
+00186 0255 	; exit: W=EEDATA, Bank 0 selected
+00187 0255 	;
+00188 0255 00A6 	EEReadW	movwf	EEAddrTemp
+00189 0256 	;
+00190 0256 	;==============================================================================================
+00191 0256 	; Read EEPROM
+00192 0256 	; entry: EEPROM address to read in EEAddrTemp
+00193 0256 	;        Bank 0 selected
+00194 0256 	; exit: W=EEDATA, Bank 0 selected
+00195 0256 	;
+00196 0256 0826 	EERead	MOVF	EEAddrTemp,W	;Data Memory
+00197 0257 0023  a		MOVLB	EEADRL	;banksel
+00196 0258 		BANKSEL	EEADRL
+00198 0258 0091 		MOVWF	EEADRL	;Address to read
+00199 0259 	;
+00200 0259 1315 		BCF	EECON1,CFGS	;Deselect Config space
+00201 025A 1395 		BCF	EECON1,EEPGD	;Point to DATA memory
+00202 025B 1415 		BSF	EECON1,RD	;EE Read
+00203 025C 0813 		MOVF	EEDATL,W	;W = EEDATL
+00204 025D 0020 		MOVLB	0x00	;Bank 0
+00205 025E 0008 		return
+00206 025F 	;
+00207 025F 	;==============================================================================================
+00208 025F 	; Write EEPROM
+00209 025F 	; entry: EEPROM address to write in W
+00210 025F 	;        EEPROM data to write in EEDataTemp
+00211 025F 	;        Bank 0 selected
+00212 025F 	; exit: Bank 0 selected
+00213 025F 	;
+00214 025F 00A6 	EEWriteW	movwf	EEAddrTemp
 RocketServo.asm                                                       Page: 14
 /Users/davidflynn/Projects/Rocket-Servo/Firmware Rev B/
 
-00214 0260 00A6 	EEWriteW	movwf	EEAddrTemp
-00215 0261 	;
-00216 0261 	;==============================================================================================
-00217 0261 	; Write EEPROM
-00218 0261 	; entry: EEPROM address to write in EEAdrTemp
-00219 0261 	;        EEPROM data to write in EEDataTemp
-00220 0261 	;        Bank 0 selected
-00221 0261 	; exit: Bank 0 selected
-00222 0261 	;
-00223 0261 0826 	EEWrite	MOVF	EEAddrTemp,W
-00224 0262 0023  a		MOVLB	EEADRL	;banksel
-00223 0263 		BANKSEL	EEADRL
-00225 0263 0091 		MOVWF	EEADRL	;Data Memory Address to write
-00226 0264 0020  a		MOVLB	EEDataTemp	;banksel
-00225 0265 		BankSel	EEDataTemp
-00227 0265 0827 		MOVF	EEDataTemp,W
-00228 0266 0023  a		MOVLB	EEDATL	;banksel
-00227 0267 		BANKSEL	EEDATL
-00229 0267 0093 		MOVWF	EEDATL	;Data Memory Value to write
-00230 0268 1315 		BCF	EECON1,CFGS	;Deselect Configuration space
-00231 0269 1395 		BCF	EECON1,EEPGD	;Point to DATA memory
-00232 026A 138B 		BCF	INTCON,GIE	;Disable INTs.
-00233 026B 1515 		BSF	EECON1,WREN	;Enable writes
-00234 026C 3055 		MOVLW	0x55
-00235 026D 0096 		MOVWF	EECON2	;Write 55h
-00236 026E 30AA 		MOVLW	0xAA
-00237 026F 0096 		MOVWF	EECON2	;Write AAh
-00238 0270 1495 		BSF	EECON1,WR	;Set WR bit to begin write
-00239 0271 178B 		BSF	INTCON,GIE	;Enable Interrupts
-00240 0272 1115 		BCF	EECON1,WREN	;Disable writes
-00241 0273 1895 	EEWriteLoop	BTFSC	EECON1,WR	;Wait for write to complete
-00242 0274 2A73 		GOTO	EEWriteLoop
-00243 0275 0020 		MOVLB	0x00	;Bank 0
-00244 0276 0008 		return
-00245 0277 	;
-00246 0277 	;=========================================================================================================
-00247 0277 		IF useRS232
-00396 0277 		ENDIF
-00397 0277 	;
-00398 0277 	;
-00399 0277 	;
-01141 0277 	;
-01142 0277 	;=========================================================================================
-01143 0277 	;=========================================================================================
-01144 0277 	;
-01145 0277 	;
-01146 0277 	;
-01147 0277 	;
-01148 0277 		END
+00215 0260 	;
+00216 0260 	;==============================================================================================
+00217 0260 	; Write EEPROM
+00218 0260 	; entry: EEPROM address to write in EEAdrTemp
+00219 0260 	;        EEPROM data to write in EEDataTemp
+00220 0260 	;        Bank 0 selected
+00221 0260 	; exit: Bank 0 selected
+00222 0260 	;
+00223 0260 0826 	EEWrite	MOVF	EEAddrTemp,W
+00224 0261 0023  a		MOVLB	EEADRL	;banksel
+00223 0262 		BANKSEL	EEADRL
+00225 0262 0091 		MOVWF	EEADRL	;Data Memory Address to write
+00226 0263 0020  a		MOVLB	EEDataTemp	;banksel
+00225 0264 		BankSel	EEDataTemp
+00227 0264 0827 		MOVF	EEDataTemp,W
+00228 0265 0023  a		MOVLB	EEDATL	;banksel
+00227 0266 		BANKSEL	EEDATL
+00229 0266 0093 		MOVWF	EEDATL	;Data Memory Value to write
+00230 0267 1315 		BCF	EECON1,CFGS	;Deselect Configuration space
+00231 0268 1395 		BCF	EECON1,EEPGD	;Point to DATA memory
+00232 0269 138B 		BCF	INTCON,GIE	;Disable INTs.
+00233 026A 1515 		BSF	EECON1,WREN	;Enable writes
+00234 026B 3055 		MOVLW	0x55
+00235 026C 0096 		MOVWF	EECON2	;Write 55h
+00236 026D 30AA 		MOVLW	0xAA
+00237 026E 0096 		MOVWF	EECON2	;Write AAh
+00238 026F 1495 		BSF	EECON1,WR	;Set WR bit to begin write
+00239 0270 178B 		BSF	INTCON,GIE	;Enable Interrupts
+00240 0271 1115 		BCF	EECON1,WREN	;Disable writes
+00241 0272 1895 	EEWriteLoop	BTFSC	EECON1,WR	;Wait for write to complete
+00242 0273 2A72 		GOTO	EEWriteLoop
+00243 0274 0020 		MOVLB	0x00	;Bank 0
+00244 0275 0008 		return
+00245 0276 	;
+00246 0276 	;=========================================================================================================
+00247 0276 		IF useRS232
+00396 0276 		ENDIF
+00397 0276 	;
+00398 0276 	;
+00399 0276 	;
+01141 0276 	;
+01142 0276 	;=========================================================================================
+01143 0276 	;=========================================================================================
+01144 0276 	;
+01145 0276 	;
+01146 0276 	;
+01147 0276 	;
+01148 0276 		END
 
 X-Ref Table
 ActivationTime	012C 	HomeServo, ML_Btns_End
@@ -1402,44 +1401,44 @@ CCP1SEL	0000 	start
 CCPR1H	0292 	IRQ_Servo1_1, IRQ_Servo1_OL, SS_Start_Loop
 CCPR1L	0291 	IRQ_Servo1_1, IRQ_Servo1_OL, SS_Start_Loop
 CFGS	0006 	EERead, EEWrite
-ClampInt ^	01CF 	ML_Btns_Inc, ML_Btns_Dec
-ClampInt_1 ^	01DC 	ClampInt
-ClampInt_tooHigh ^	01EB 	ClampInt
-ClampInt_tooLow ^	01E6 	ClampInt_1
-ClearRam ^	01FF 	start
-ClearRam_L2 ^	020A 	ClearRam, ClearRam_L2
+ClampInt ^	01CE 	ML_Btns_Inc, ML_Btns_Dec
+ClampInt_1 ^	01DB 	ClampInt
+ClampInt_tooHigh ^	01EA 	ClampInt
+ClampInt_tooLow ^	01E5 	ClampInt_1
+ClearRam ^	01FE 	start
+ClearRam_L2 ^	0209 	ClearRam, ClearRam_L2
 CmdInputBit	PORTA,3	ML_Btns_End
-Copy7CToSig ^	0150 	Move_It_Now, SS_Start_Loop
-Copy7CToSig_1 ^	0158 	Copy7CToSig, Copy7CToSig_1
-CopyPos1ToDest ^	016A 	CopyPosToDest
-CopyPos1ToTemp ^	0174 	CopyPosToTemp
-CopyPos2ToDest ^	016F 	CopyPosToDest
-CopyPos2ToTemp ^	0179 	CopyPosToTemp
-CopyPosToDest ^	0167 	Move_It, SS_Start_Loop
-CopyPosToTemp ^	0164 	ML_Btns_Inc, ML_Btns_Dec
-CopyTempToPos ^	0161 	ML_Btns_Inc, ML_Btns_Dec
-CopyTempToPos1 ^	017E 	CopyTempToPos
-CopyTempToPos2 ^	0183 	CopyTempToPos
-CopyToRam ^	020F 	start
-CopyToRam_L1 ^	0215 	CopyToRam_L1
+Copy7CToSig ^	014F 	Move_It_Now, SS_Start_Loop
+Copy7CToSig_1 ^	0157 	Copy7CToSig, Copy7CToSig_1
+CopyPos1ToDest ^	0169 	CopyPosToDest
+CopyPos1ToTemp ^	0173 	CopyPosToTemp
+CopyPos2ToDest ^	016E 	CopyPosToDest
+CopyPos2ToTemp ^	0178 	CopyPosToTemp
+CopyPosToDest ^	0166 	Move_It, SS_Start_Loop
+CopyPosToTemp ^	0163 	ML_Btns_Inc, ML_Btns_Dec
+CopyTempToPos ^	0160 	ML_Btns_Inc, ML_Btns_Dec
+CopyTempToPos1 ^	017D 	CopyTempToPos
+CopyTempToPos2 ^	0182 	CopyTempToPos
+CopyToRam ^	020E 	start
+CopyToRam_L1 ^	0214 	CopyToRam_L1
 CurPos	0032 	Set_Dest_End, Move_It_NIP, Move_It_New, Move_It_Dest, Move_It_Now, SS_Start_Loop
 		SetDestAsCur
 DataChangedFlag	Flags,3	MainLoop, ML_Btns_Inc, ML_Btns_Dec, ML_Btns_Save
 Debounce	0039 	ML_Btns_End, Rev_Debounce, ML_CmdNormal, Norm_Debounce
+DecBtnBit	PORTA,4	
 RocketServo.asm   X-Ref Table                                            Page: 15
 /Users/davidflynn/Projects/Rocket-Servo/Firmware Rev B/
 
-DecBtnBit	PORTA,4	
 DecBtnFlag	Flags,1	, MainLoop, ML_Btns_Dec
-DecTimer ^	0235 	DecTimer4, DecTimer3, DecTimer2
-DecTimer1 ^	0234 	
-DecTimer2 ^	0232 	
-DecTimer3 ^	0230 	
-DecTimer4 ^	022E 	
+DecTimer ^	0234 	DecTimer4, DecTimer3, DecTimer2
+DecTimer1 ^	0233 	
+DecTimer2 ^	0231 	
+DecTimer3 ^	022F 	
+DecTimer4 ^	022D 	
 Delay_1S ^	00B6 	Start_L1
 Delay_L1 ^	00B8 	Delay_L1
-DelayWuS ^	0252 	DecTimer
-DelayWuS_Loop ^	0253 	DelayWuS_Loop
+DelayWuS ^	0251 	DecTimer
+DelayWuS_Loop ^	0252 	DelayWuS_Loop
 Dest	0030 	MainLoop, Set_Dest_End, Move_It_NIP, Move_It_Dest, CopyPos1ToDest, CopyPos2ToDest
 		SS_Start_Loop, SetDestAsCur
 EEAddrTemp	0026 	CopyToRam, CopyToRam_L1, SaveParams, SaveParams_L1, DelayWuS_Loop
@@ -1450,9 +1449,9 @@ EECON2	0196 	EEWrite
 EEDataTemp	0027 	SaveParams_L1, EEWrite
 EEDATL	0193 	EERead, EEWrite
 EEPGD	0007 	EERead, EEWrite
-EERead ^	0257 	CopyToRam_L1
-EEWrite ^	0261 	SaveParams_L1
-EEWriteLoop ^	0273 	EEWriteLoop
+EERead ^	0256 	CopyToRam_L1
+EEWrite ^	0260 	SaveParams_L1
+EEWriteLoop ^	0272 	EEWriteLoop
 F	0001 	, SystemBlink_Blinking, SystemBlink_end, IRQ_Servo1_1, IRQ_Servo1_OL, start
 		ML_Btns_Inc, ML_Btns_Dec, Rev_Debounce, ML_CmdNormal, Norm_Debounce, Set_Dest_End
 		Move_It_NIP, Move_It_Neg, SS_Start_Loop, ClearRam_L2, CopyToRam_L1, SaveParams_L1
@@ -1467,7 +1466,7 @@ FSR0L	0004 	DecTimer
 GIE	0007 	start, Copy7CToSig_1, EEWrite
 GO	0001 	ReadAN0_ColdStart
 HasBattV	0001 	start
-HoldOpen	0000 	ML_CmdNormal
+HoldOpen	0001 	ML_CmdNormal
 HomeServo ^	00BD 	Start_L1
 IncBtnBit	PORTA,2	
 IncBtnFlag	Flags,0	, MainLoop
@@ -1480,8 +1479,8 @@ IRQ_Servo1_1 ^	0038 	IRQ_2
 IRQ_Servo1_End ^	005E 	IRQ_2
 IRQ_Servo1_OL ^	0050 	IRQ_Servo1_1
 IRQ_Servo1_X ^	005C 	IRQ_2, IRQ_Servo1_1
-kDefaultPosition1	0C80 	EEWriteLoop
-kDefaultPosition2	0AF0 	EEWriteLoop
+kDefaultPosition1	07D0 	EEWriteLoop
+kDefaultPosition2	100E 	EEWriteLoop
 kInPosShutdown	0002 	EEWriteLoop
 kMaxPulseWidth	1068 	ClampInt, ClampInt_tooHigh
 kMidPulseWidth	0BB8 	MainLoop, SS_Start_Loop
@@ -1505,15 +1504,15 @@ ML_Btns_End ^	00F0 	MainLoop, ML_Btns_Inc, ML_Btns_Dec
 ML_Btns_Inc ^	00D5 	MainLoop
 ML_Btns_Save ^	00ED 	ML_Btns_Dec
 ML_CmdNormal ^	0103 	ML_Btns_End
-Move_End ^	014F 	Set_Dest_End
-Move_It ^	0110 	ML_Btns_End, ML_CmdNormal
-Move_It_Dest ^	0146 	Move_It_NIP, Move_It_Neg
-Move_It_Neg ^	013E 	Move_It_NIP
-Move_It_New ^	0139 	Move_It_Neg
-Move_It_NIP ^	0122 	Set_Dest_End
-Move_It_Now ^	014A 	Set_Dest_End, Move_It_New
+Move_End ^	014E 	Set_Dest_End
+Move_It ^	010F 	ML_Btns_End, ML_CmdNormal
+Move_It_Dest ^	0145 	Move_It_NIP, Move_It_Neg
+Move_It_Neg ^	013D 	Move_It_NIP
+Move_It_New ^	0138 	Move_It_Neg
+Move_It_NIP ^	0121 	Set_Dest_End
+Move_It_Now ^	0149 	Set_Dest_End, Move_It_New
 NewSWData	Flags,6	, ML_Btns_End
-Norm_Debounce ^	010E 	ML_CmdNormal
+Norm_Debounce ^	010D 	ML_CmdNormal
 NOT_DONE	0001 	ReadAN0_L1
 NOT_WPUEN	0007 	start
 nvFirstParamByte	nvPosition1Lo	EEWriteLoop, CopyToRam, SaveParams
@@ -1528,10 +1527,10 @@ OPTION_REG	0095 	start
 OSCCON	0099 	start
 OSCCON_Value	0072 	start
 Param77	0077 	Move_It_NIP, Move_It_Neg, Param7D_LE_Param79, SetTrue, DelayWuS, DelayWuS_Loop
+Param78	0078 	Set_Dest_End, Move_It_NIP, Param7D_LE_Param79
 RocketServo.asm   X-Ref Table                                            Page: 16
 /Users/davidflynn/Projects/Rocket-Servo/Firmware Rev B/
 
-Param78	0078 	Set_Dest_End, Move_It_NIP, Param7D_LE_Param79
 Param79	0079 	Move_It_NIP, Param7D_LE_Param79
 Param7C	007C 	start, ML_Btns_Inc, ML_Btns_Dec, Move_It_NIP, Move_It_New, Move_It_Neg
 		Move_It_Now, Copy7CToSig, Copy7CToSig_1, CopyPos1ToTemp, CopyPos2ToTemp, CopyTempToPos1
@@ -1541,7 +1540,7 @@ Param7D	007D 	start, ML_Btns_Inc, ML_Btns_Dec, Move_It_NIP, Move_It_New, Move_It
 		Move_It_Now, Copy7CToSig, Copy7CToSig_1, CopyPos1ToTemp, CopyPos2ToTemp, CopyTempToPos1
 		CopyTempToPos2, ReadAN0, ReadAN0_L1, SS_Start_Loop, SetDestAsCur, ClampInt, ClampInt_1
 		ClampInt_tooLow, ClampInt_tooHigh, Param7D_LE_Param79
-Param7D_LE_Param79 ^	01F0 	Move_It_NIP, Move_It_Neg
+Param7D_LE_Param79 ^	01EF 	Move_It_NIP, Move_It_Neg
 Param7F	007F 	ClearRam, ClearRam_L2
 PCLATH	000A 	
 PEIE	0006 	start
@@ -1560,26 +1559,26 @@ PS2	0002 	start
 PSA	0003 	start
 PulseSent	SysFlags,0	IRQ_2, Set_Dest_End
 RD	0000 	EERead
-ReadAN0 ^	0188 	start
-ReadAN0_ColdStart ^	0196 	start, ReadAN0
-ReadAN0_L1 ^	018D 	ReadAN0_L1
+ReadAN0 ^	0187 	start
+ReadAN0_ColdStart ^	0195 	start, ReadAN0
+ReadAN0_L1 ^	018C 	ReadAN0_L1
 Rev_Debounce ^	0101 	ML_Btns_End
-SaveParams ^	021E 	ML_Btns_Save
-SaveParams_L1 ^	0224 	SaveParams_L1
+SaveParams ^	021D 	ML_Btns_Save
+SaveParams_L1 ^	0223 	SaveParams_L1
 ServoMoveTime	012C 	Move_It_NIP, SS_Start_Loop
 ServoOff	Flags,4	IRQ_2, start, StartServo
-Set_Dest_End ^	0111 	MainLoop, ML_Btns_End, Rev_Debounce, Norm_Debounce
-SetDestAsCur ^	01C8 	SS_Start_Loop
-SetTrue ^	01FD 	Param7D_LE_Param79
+Set_Dest_End ^	0110 	MainLoop, ML_Btns_End, Rev_Debounce, Norm_Debounce
+SetDestAsCur ^	01C7 	SS_Start_Loop
+SetTrue ^	01FC 	Param7D_LE_Param79
 SigOutTime	0070 	IRQ_Servo1_1, Copy7CToSig, Copy7CToSig_1
 SigOutTimeH	0071 	Copy7CToSig, Copy7CToSig_1
 SlewChangeRate	0010 	Move_It_NIP, Move_It_Neg
-SMRevFlag	Flags,5	HomeServo, ML_Btns_End, ML_CmdNormal, CopyTempToPos, CopyPosToTemp
-		CopyPosToDest, SS_Start_Loop
-SS_Start_Loop ^	01A2 	SS_Start_Loop
+SMRevFlag	Flags,5	HomeServo, ML_Btns_End, CopyTempToPos, CopyPosToTemp, CopyPosToDest
+		SS_Start_Loop
+SS_Start_Loop ^	01A1 	SS_Start_Loop
 start ^	005F 	
 Start_L1 ^	00A2 	Start_L1
-StartServo ^	019E 	Start_L1
+StartServo ^	019D 	Start_L1
 STATUS	0003 	, Start_L1, LongFlash_L1, Delay_L1, MainLoop, ML_Btns_End, ML_CmdNormal
 		Set_Dest_End, Copy7CToSig, SS_Start_Loop, ClampInt, ClampInt_1, Param7D_LE_Param79
 		CopyToRam_L1, SaveParams_L1, DecTimer
@@ -1624,24 +1623,24 @@ Z	0002 	, Start_L1, LongFlash_L1, Delay_L1, MainLoop, ML_Btns_End, ML_CmdNormal,
  
 
 X-Ref Table (The UnCalled)
-Delay100uS !	024F 	
-Delay10uS !	024D 	
-Delay40uS !	0251 	
-EEReadW !	0256 	
-EEWriteW !	0260 	
+Delay100uS !	024E 	
+Delay10uS !	024C 	
+Delay40uS !	0250 	
+EEReadW !	0255 	
+EEWriteW !	025F 	
 IRQ_Servo1 !	002F 	
+ReadAN0_Rtn !	019B 	
 RocketServo.asm   X-Ref Table                                            Page: 17
 /Users/davidflynn/Projects/Rocket-Servo/Firmware Rev B/
 
-ReadAN0_Rtn !	019C 	
-SetMiddlePosition !	01BF 	
-SS_CmdNormal !	01A5 	
-SS_Move_It !	01A8 	
+SetMiddlePosition !	01BE 	
+SS_CmdNormal !	01A4 	
+SS_Move_It !	01A7 	
 SystemBlink_1 !	0018 	
-TestT1_Zero !	024A 	
-TestT2_Zero !	0247 	
-TestT3_Zero !	0244 	
-TestT4_Zero !	0241 	
+TestT1_Zero !	0249 	
+TestT2_Zero !	0246 	
+TestT3_Zero !	0243 	
+TestT4_Zero !	0240 	
  
 
 Memory Usage Map ('X' = Used, '-' = Unused)
@@ -1655,10 +1654,10 @@ Memory Usage Map ('X' = Used, '-' = Unused)
 0180  : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
 01C0  : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
 0200  : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
-0240  : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXX---------
+0240  : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXX----------
  
-Program Memory Words Used:630
-Program Memory Words Free:1418
+Program Memory Words Used:629
+Program Memory Words Free:1419
  
 UserID
 8000  :XXXX

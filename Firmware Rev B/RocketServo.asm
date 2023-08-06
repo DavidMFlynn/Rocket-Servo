@@ -2,7 +2,7 @@
 ;
 ;   Filename:	RocketServo.asm
 ;   Date:	5/4/2023
-;   File Version:	1.1b2
+;   File Version:	1.1b3
 ;
 ;    Author:	David M. Flynn
 ;    Company:	Oxford V.U.E., Inc.
@@ -13,6 +13,7 @@
 ;    RC Servo Activator for high power rocketry uses PIC12F1822
 ;
 ;    History:
+; 1.1b3   8/6/2023	Added BP3Hold mode.
 ; 1.1b2   5/4/2023	Fixed batt V blink, 10 or 11 blinks.
 ; 1.1b1   12/28/2022	Added battery voltage sensing RA0 9.75C/V 3 for diode
 ; 1.0b2   11/7/2022	Inverted CmdInputBit to active low
@@ -21,6 +22,7 @@
 ;====================================================================================================
 ; Options
 HasBattV	EQU	1	;Set to 0 or 1
+BP3Hold	EQU	0	;Hold at reverse value
 ;====================================================================================================
 ; To Do's
 ;
@@ -113,8 +115,15 @@ kOffsetCtrValue	EQU	d'2047'
 kMinPulseWidth	EQU	d'1800'	;900uS
 kMidPulseWidth	EQU	d'3000'	;1500uS
 kMaxPulseWidth	EQU	d'4200'	;2100uS
+	if BP3Hold
+kDefaultPosition1	EQU	d'2000'	;1000uS Locked
+kDefaultPosition2	EQU	d'4110'	;2055uS Open
+HoldOpen	EQU	1
+	else
 kDefaultPosition1	EQU	kMidPulseWidth+d'200'
 kDefaultPosition2	EQU	kMidPulseWidth-d'200'
+HoldOpen	EQU	0
+	endif
 kServoDwellTime	EQU	d'32000'	;16mS
 kInPosShutdown	EQU	b'00000010'	;b'00000010' enabled 0x00 disabled
 ;
@@ -552,8 +561,10 @@ Start_L1	CLRWDT
 	movwf	LED_Blinks
 ;
 	CALL	StartServo
+	CALL	HomeServo
 	BRA	MainLoop
 ;
+;==============================================
 ; One second ON one second OFF
 LongFlash	movlw	.100
 	movwf	LED_Blinks
@@ -570,6 +581,17 @@ Delay_L1	movf	Timer1Lo,W
 	bra	Delay_L1
 	CLRWDT
 	return
+;
+;==============================================
+HomeServo	movlb	0	;Bank0
+	bcf	SMRevFlag
+	bcf	LED2Flag
+	movlw	Low ActivationTime
+	movwf	Timer3Lo
+	movlw	High ActivationTime
+	movwf	Timer3Hi
+	return
+;
 ;=========================================================================================
 ;
 BtnChangeRate	EQU	0x02	;change by 1uS per 0.05 seconds
@@ -668,7 +690,9 @@ ML_CmdNormal	movf	Debounce,F
 	iorwf	Timer3Hi,W
 	SKPZ		;Activation time done?
 	bra	Move_It	; No
+	if HoldOpen=0
 	bcf	SMRevFlag
+	endif
 	bcf	LED2Flag
 	bra	Move_It
 ;
