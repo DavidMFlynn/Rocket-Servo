@@ -131,8 +131,8 @@ RocketServo.asm                                                       Page: 1
 00117 0000 1068 	kMaxPulseWidth	EQU	d'4200'	;2100uS
 00118 0000 		if BP3Hold
 00122 0000 		else
-00123 0000 0C80 	kDefaultPosition1	EQU	kMidPulseWidth+d'200'
-00124 0000 0AF0 	kDefaultPosition2	EQU	kMidPulseWidth-d'200'
+00123 0000 0E10 	kDefaultPosition1	EQU	d'3600'	;1800
+00124 0000 0898 	kDefaultPosition2	EQU	d'2200'	;1100
 00125 0000 0000 	HoldOpen	EQU	0
 00126 0000 		endif
 00127 0000 7D00 	kServoDwellTime	EQU	d'32000'	;16mS
@@ -268,361 +268,361 @@ RocketServo.asm                                                       Page: 1
 00256 0000 	;
 00257 0000 012C 	ServoMoveTime	EQU	.300	;time servo is powered when CMD changes
 00258 0000 	;
-00259 0000 	;=========================================================================================
-00260 0000 	;Conditionals
-00261 0000 0080 	HasISR	EQU	0x80	;used to enable interupts 0x80=true 0x00=false
-00262 0000 	;
-00263 0000 	;=========================================================================================
-00264 0000 	;==============================================================================================
-00265 0000 	; ID Locations
-00266 0000 		__idlocs	0x11B1
-00267 0000 	;
-00268 0000 	;==============================================================================================
-00269 0000 	; EEPROM locations (NV-RAM) 0x00..0x7F (offsets)
-00270 0000 		org	0xF000
-00271 F000 	;
-00272 F000 0080 		de	LOW kDefaultPosition1	;nvPosition1Lo
-00273 F001 000C 		de	HIGH kDefaultPosition1
-00274 F002 00F0 		de	LOW kDefaultPosition2
-00275 F003 000A 		de	HIGH kDefaultPosition2
-00276 F004 	;
-00277 F004 0002 		de	kInPosShutdown	;nvSysFlags
-00278 F005 	;
-00279 F005 		cblock	0x00
-00280 F005 0000 		nvPosition1Lo
-00281 F005 0001 		nvPosition1Hi
-00282 F005 0002 		nvPosition2Lo
-00283 F005 0003 		nvPosition2Hi
-00284 F005 	;
-00285 F005 0004 		nvSysFlags
-00286 F005 		endc
+00259 0000 0002 	BtnChangeRate	EQU	0x02	;change by 1uS per 0.05 seconds
+00260 0000 0040 	SlewChangeRate	EQU	0x40	;change by 8uS per 0.01 seconds
+00261 0000 	;
+00262 0000 	;=========================================================================================
+00263 0000 	;Conditionals
+00264 0000 0080 	HasISR	EQU	0x80	;used to enable interupts 0x80=true 0x00=false
+00265 0000 	;
+00266 0000 	;=========================================================================================
+00267 0000 	;==============================================================================================
+00268 0000 	; ID Locations
+00269 0000 		__idlocs	0x11B1
+00270 0000 	;
+00271 0000 	;==============================================================================================
+00272 0000 	; EEPROM locations (NV-RAM) 0x00..0x7F (offsets)
+00273 0000 		org	0xF000
+00274 F000 	;
+00275 F000 0010 		de	LOW kDefaultPosition1	;nvPosition1Lo
+00276 F001 000E 		de	HIGH kDefaultPosition1
+00277 F002 0098 		de	LOW kDefaultPosition2
+00278 F003 0008 		de	HIGH kDefaultPosition2
+00279 F004 	;
+00280 F004 0002 		de	kInPosShutdown	;nvSysFlags
+00281 F005 	;
+00282 F005 		cblock	0x00
+00283 F005 0000 		nvPosition1Lo
+00284 F005 0001 		nvPosition1Hi
+00285 F005 0002 		nvPosition2Lo
+00286 F005 0003 		nvPosition2Hi
 00287 F005 	;
-00288 F005 0000 	#Define	nvFirstParamByte	nvPosition1Lo
-00289 F005 0004 	#Define	nvLastParamByte	nvSysFlags
+00288 F005 0004 		nvSysFlags
+00289 F005 		endc
 00290 F005 	;
-00291 F005 	;
-00292 F005 	;==============================================================================================
-00293 F005 	;============================================================================================
+00291 F005 0000 	#Define	nvFirstParamByte	nvPosition1Lo
+00292 F005 0004 	#Define	nvLastParamByte	nvSysFlags
+00293 F005 	;
 00294 F005 	;
 RocketServo.asm                                                       Page: 4
 /Users/davidflynn/Projects/Rocket-Servo/Firmware Rev B/
 
-00295 F005 	;
-00296 F005 		ORG	0x000	; processor reset vector
-00297 0000 0183 		CLRF	STATUS
-00298 0001 018A 		CLRF	PCLATH
-00299 0002 285F 	  	goto	start	; go to beginning of program
-00300 0003 	;
-00301 0003 	;===============================================================================================
-00302 0003 	; Interupt Service Routine
+00295 F005 	;==============================================================================================
+00296 F005 	;============================================================================================
+00297 F005 	;
+00298 F005 	;
+00299 F005 		ORG	0x000	; processor reset vector
+00300 0000 0183 		CLRF	STATUS
+00301 0001 018A 		CLRF	PCLATH
+00302 0002 285F 	  	goto	start	; go to beginning of program
 00303 0003 	;
-00304 0003 	; we loop through the interupt service routing every 0.01 seconds
-00305 0003 	;
+00304 0003 	;===============================================================================================
+00305 0003 	; Interupt Service Routine
 00306 0003 	;
-00307 0003 		ORG	0x004	; interrupt vector location
-00308 0004 0020 		movlb	0	; bank0
-00309 0005 	;
-00310 0005 1C91 		btfss	PIR1,TMR2IF
-00311 0006 282F 		goto	IRQ_2
-00312 0007 1091 		bcf	PIR1,TMR2IF	; reset interupt flag bit
-00313 0008 	;
-00314 0008 	;Decrement timers until they are zero
-00315 0008 	;
-00316 0008 0185 		CLRF	FSR0H
-00317 0009 2234 		call	DecTimer1	;if timer 1 is not zero decrement
-00318 000A 2232 		call	DecTimer2
-00319 000B 2230 		call	DecTimer3
-00320 000C 222E 		call	DecTimer4
-00321 000D 	;
-00322 000D 	;-----------------------------------------------------------------
-00323 000D 	; blink LEDs
-00324 000D 0021 		movlb                  1                      ;bank 1
-00325 000E 160C 		BSF	SysLEDTrisBit	;LED off
-00326 000F 150C 		BSF	LED2TrisBit	;LED2 off
-00327 0010 	;
-00328 0010 0020 		movlb	0	;bank 0
-00329 0011 1072 		BCF	IncBtnFlag
-00330 0012 1D0C 		BTFSS	IncBtnBit
-00331 0013 1472 		BSF	IncBtnFlag
-00332 0014 	;
-00333 0014 10F2 		BCF	DecBtnFlag
-00334 0015 1E0C 		BTFSS	DecBtnBit
-00335 0016 14F2 		BSF	DecBtnFlag
-00336 0017 	;
-00337 0017 1772 		bsf	NewSWData	;New data every 0.01s
-00338 0018 	;
-00339 0018 0BA3 	SystemBlink_1	DECFSZ	LED_Ticks,F	;Time to blink?
-00340 0019 320B 		bra	SystemBlink_end	; no
-00341 001A 	;
-00342 001A 0821 		MOVF	LED_Time,W
-00343 001B 00A3 		movwf	LED_Ticks
-00344 001C 	;
-00345 001C 08A5 		movf	LED_Blinks,F	;nBlinks, 0xFF=system blink, 0=Off
-00346 001D 		SKPNZ
-00346 001D 1903      M		BTFSC	STATUS,Z		BTFSC	STATUS,Z
-00347 001E 3206 		BRA	SystemBlink_end
-00348 001F 0F25 		incfsz	LED_Blinks,W
-00349 0020 3201 		BRA	SystemBlink_Blinking
-00350 0021 3201 		BRA	SystemBlink_on
-00351 0022 03A5 	SystemBlink_Blinking	decf	LED_Blinks,F
-00352 0023 0021 	SystemBlink_on	movlb                  1                      ;bank 1
-00353 0024 120C 		BCF	SysLEDTrisBit	;LED on
-00354 0025 0020 	SystemBlink_end	MOVLB	0                      ;bank 0
-00355 0026 	;
-00356 0026 0BA4 		decfsz	LED2_Ticks,F
-00357 0027 3206 		bra	LED2_End
-00358 0028 	;
-00359 0028 0822 		MOVF	LED2_Time,W
-00360 0029 00A4 		movwf	LED2_Ticks
-00361 002A 	;
-00362 002A 1D72 		BTFSS	LED2Flag
-00363 002B 3202 		bra                    LED2_End
-00364 002C 0021 		movlb                  1                      ;bank 1
-00365 002D 110C 		BCF	LED2TrisBit
-00366 002E 	;
-00367 002E 0020 	LED2_End	MOVLB	0
-00368 002F 	;-----------------------------------------------------------------
-00369 002F 	;
-00370 002F 	IRQ_2:
-00371 002F 	;==================================================================================
+00307 0003 	; we loop through the interupt service routing every 0.01 seconds
+00308 0003 	;
+00309 0003 	;
+00310 0003 		ORG	0x004	; interrupt vector location
+00311 0004 0020 		movlb	0	; bank0
+00312 0005 	;
+00313 0005 1C91 		btfss	PIR1,TMR2IF
+00314 0006 282F 		goto	IRQ_2
+00315 0007 1091 		bcf	PIR1,TMR2IF	; reset interupt flag bit
+00316 0008 	;
+00317 0008 	;Decrement timers until they are zero
+00318 0008 	;
+00319 0008 0185 		CLRF	FSR0H
+00320 0009 2234 		call	DecTimer1	;if timer 1 is not zero decrement
+00321 000A 2232 		call	DecTimer2
+00322 000B 2230 		call	DecTimer3
+00323 000C 222E 		call	DecTimer4
+00324 000D 	;
+00325 000D 	;-----------------------------------------------------------------
+00326 000D 	; blink LEDs
+00327 000D 0021 		movlb                  1                      ;bank 1
+00328 000E 160C 		BSF	SysLEDTrisBit	;LED off
+00329 000F 150C 		BSF	LED2TrisBit	;LED2 off
+00330 0010 	;
+00331 0010 0020 		movlb	0	;bank 0
+00332 0011 1072 		BCF	IncBtnFlag
+00333 0012 1D0C 		BTFSS	IncBtnBit
+00334 0013 1472 		BSF	IncBtnFlag
+00335 0014 	;
+00336 0014 10F2 		BCF	DecBtnFlag
+00337 0015 1E0C 		BTFSS	DecBtnBit
+00338 0016 14F2 		BSF	DecBtnFlag
+00339 0017 	;
+00340 0017 1772 		bsf	NewSWData	;New data every 0.01s
+00341 0018 	;
+00342 0018 0BA3 	SystemBlink_1	DECFSZ	LED_Ticks,F	;Time to blink?
+00343 0019 320B 		bra	SystemBlink_end	; no
+00344 001A 	;
+00345 001A 0821 		MOVF	LED_Time,W
+00346 001B 00A3 		movwf	LED_Ticks
+00347 001C 	;
+00348 001C 08A5 		movf	LED_Blinks,F	;nBlinks, 0xFF=system blink, 0=Off
+00349 001D 		SKPNZ
+00349 001D 1903      M		BTFSC	STATUS,Z		BTFSC	STATUS,Z
+00350 001E 3206 		BRA	SystemBlink_end
+00351 001F 0F25 		incfsz	LED_Blinks,W
+00352 0020 3201 		BRA	SystemBlink_Blinking
+00353 0021 3201 		BRA	SystemBlink_on
+00354 0022 03A5 	SystemBlink_Blinking	decf	LED_Blinks,F
+00355 0023 0021 	SystemBlink_on	movlb                  1                      ;bank 1
+00356 0024 120C 		BCF	SysLEDTrisBit	;LED on
+00357 0025 0020 	SystemBlink_end	MOVLB	0                      ;bank 0
+00358 0026 	;
+00359 0026 0BA4 		decfsz	LED2_Ticks,F
+00360 0027 3206 		bra	LED2_End
+00361 0028 	;
+00362 0028 0822 		MOVF	LED2_Time,W
+00363 0029 00A4 		movwf	LED2_Ticks
+00364 002A 	;
+00365 002A 1D72 		BTFSS	LED2Flag
+00366 002B 3202 		bra                    LED2_End
+00367 002C 0021 		movlb                  1                      ;bank 1
+00368 002D 110C 		BCF	LED2TrisBit
+00369 002E 	;
+00370 002E 0020 	LED2_End	MOVLB	0
+00371 002F 	;-----------------------------------------------------------------
 00372 002F 	;
-00373 002F 	; Handle CCP1 Interupt Flag, Enter w/ bank 0 selected
-00374 002F 	;
-00375 002F 0020 	IRQ_Servo1	MOVLB	0	;bank 0
-00376 0030 1D11 		BTFSS	PIR1,CCP1IF
-00377 0031 285E 		GOTO	IRQ_Servo1_End
-00378 0032 	;
-00379 0032 1438 		BSF	PulseSent
-00380 0033 1E72 		BTFSS	ServoOff	;Are we sending a pulse?
-00381 0034 2838 		GOTO	IRQ_Servo1_1	; Yes
-00382 0035 	;
-00383 0035 	;Oops, how did we get here???
-00384 0035 0025 		MOVLB	0x05                   ;Bank 5
-00385 0036 0193 		CLRF	CCP1CON
-00386 0037 285C 		GOTO	IRQ_Servo1_X
-00387 0038 	;
-00388 0038 0025 	IRQ_Servo1_1	MOVLB	0x05                   ;Bank 5
-00389 0039 1813 		BTFSC	CCP1CON,CCP1M0	;Set output on match?
-00390 003A 2850 		GOTO	IRQ_Servo1_OL	; No
-00391 003B 	; An output just went high
-00392 003B 	;
+00373 002F 	IRQ_2:
+00374 002F 	;==================================================================================
+00375 002F 	;
+00376 002F 	; Handle CCP1 Interupt Flag, Enter w/ bank 0 selected
+00377 002F 	;
+00378 002F 0020 	IRQ_Servo1	MOVLB	0	;bank 0
+00379 0030 1D11 		BTFSS	PIR1,CCP1IF
+00380 0031 285E 		GOTO	IRQ_Servo1_End
+00381 0032 	;
+00382 0032 1438 		BSF	PulseSent
+00383 0033 1E72 		BTFSS	ServoOff	;Are we sending a pulse?
+00384 0034 2838 		GOTO	IRQ_Servo1_1	; Yes
+00385 0035 	;
+00386 0035 	;Oops, how did we get here???
+00387 0035 0025 		MOVLB	0x05                   ;Bank 5
+00388 0036 0193 		CLRF	CCP1CON
+00389 0037 285C 		GOTO	IRQ_Servo1_X
+00390 0038 	;
+00391 0038 0025 	IRQ_Servo1_1	MOVLB	0x05                   ;Bank 5
+00392 0039 1813 		BTFSC	CCP1CON,CCP1M0	;Set output on match?
 RocketServo.asm                                                       Page: 5
 /Users/davidflynn/Projects/Rocket-Servo/Firmware Rev B/
 
-00393 003B 0870 		MOVF	SigOutTime,W	;Put the pulse into the CCP reg.
-00394 003C 0791 		ADDWF	CCPR1L,F
-00395 003D 0871 		MOVF	SigOutTime+1,W
-00396 003E 3D92 		ADDWFC	CCPR1H,F
-00397 003F 0020 		movlb	0	;Bank 0
-00398 0040 300A 		movlw	CCP1CON_Int
-00399 0041 1CB8 		btfss	InPosShutdown
-00400 0042 3009 		MOVLW	CCP1CON_Clr	;Clear output on match
-00401 0043 1D38 		btfss	InPosition
-00402 0044 3009 		MOVLW	CCP1CON_Clr	;Clear output on match
-00403 0045 0025 		movlb	5	;Bank 5
-00404 0046 0093 		MOVWF	CCP1CON	;CCP1 clr on match
-00405 0047 	;Calculate dwell time
-00406 0047 3000 		MOVLW	LOW kServoDwellTime
-00407 0048 00F5 		MOVWF	CalcdDwell
-00408 0049 307D 		MOVLW	HIGH kServoDwellTime
-00409 004A 00F6 		MOVWF	CalcdDwellH
-00410 004B 0870 		MOVF	SigOutTime,W
-00411 004C 02F5 		SUBWF	CalcdDwell,F
-00412 004D 0871 		MOVF	SigOutTime+1,W
-00413 004E 3BF6 		SUBWFB	CalcdDwellH,F
-00414 004F 285C 		GOTO	IRQ_Servo1_X
-00415 0050 	;
-00416 0050 	; output went low so this cycle is done
-00417 0050 3000 	IRQ_Servo1_OL	MOVLW	LOW kServoDwellTime
-00418 0051 0791 		ADDWF	CCPR1L,F
-00419 0052 307D 		MOVLW	HIGH kServoDwellTime
-00420 0053 3D92 		ADDWFC	CCPR1H,F
-00421 0054 	;
-00422 0054 0020 		movlb	0	;Bank 0
-00423 0055 300A 		movlw	CCP1CON_Int
-00424 0056 1CB8 		btfss	InPosShutdown
-00425 0057 3008 		MOVLW	CCP1CON_Set	;Set output on match
-00426 0058 1D38 		btfss	InPosition
-00427 0059 3008 		MOVLW	CCP1CON_Set	;Set output on match
-00428 005A 0025 		movlb	5	;Bank 5
-00429 005B 0093 		MOVWF	CCP1CON	;Idle output low
-00430 005C 	;
-00431 005C 0020 	IRQ_Servo1_X	MOVLB	0x00                   ;Bank 0
-00432 005D 1111 		BCF	PIR1,CCP1IF
-00433 005E 	IRQ_Servo1_End:
-00434 005E 	;--------------------------------------------------------------------
-00435 005E 	;
-00436 005E 0009 		retfie		; return from interrupt
-00437 005F 	;
-00438 005F 	;
-00439 005F 	;==============================================================================================
-00440 005F 	;**********************************************************************************************
-00441 005F 	;==============================================================================================
-00442 005F 	;
-00443 005F 0021 	start	MOVLB	0x01	; select bank 1
-00444 0060 1795 		bsf	OPTION_REG,NOT_WPUEN	; disable pullups on port B
-00445 0061 1295 		bcf	OPTION_REG,TMR0CS	; TMR0 clock Fosc/4
-00446 0062 1195 		bcf	OPTION_REG,PSA	; prescaler assigned to TMR0
-00447 0063 1415 		bsf	OPTION_REG,PS0	;111 8mhz/4/256=7812.5hz=128uS/Ct=0.032768S/ISR
-00448 0064 1495 		bsf	OPTION_REG,PS1	;101 8mhz/4/64=31250hz=32uS/Ct=0.008192S/ISR
-00449 0065 1515 		bsf	OPTION_REG,PS2
-00450 0066 	;
-00451 0066 3072 		MOVLW	OSCCON_Value
-00452 0067 0099 		MOVWF	OSCCON
-00453 0068 3017 		movlw	b'00010111'	; WDT prescaler 1:65536 period is 2 sec (RESET value)
-00454 0069 0097 		movwf	WDTCON
-00455 006A 	;
-00456 006A 0023 		MOVLB	0x03	; bank 3
-00457 006B 	;
-00458 006B 		if HasBattV
-00459 006B 3001 		MOVLW	0x01
-00460 006C 		else
-00462 006C 		endif
-00463 006C 	;
-00464 006C 008C 		MOVWF	ANSELA	;AN0 only
-00465 006D 	;
-00466 006D 	; setup timer 1 for 0.5uS/count
-00467 006D 	;
-00468 006D 0020 		movlb	0	; bank 0
-00469 006E 3001 		MOVLW	T1CON_Val
-00470 006F 0098 		MOVWF	T1CON
-00471 0070 1399 		bcf	T1GCON,TMR1GE
-00472 0071 	;
-00473 0071 	; clear memory to zero
-00474 0071 21FF 		CALL	ClearRam
-00475 0072 	;
-00476 0072 	; Setup timer 2 for 0.01S/Interupt
-00477 0072 304E 		MOVLW	T2CON_Value	;Setup T2 for 100/s
-00478 0073 009C 		MOVWF	T2CON
-00479 0074 307D 		MOVLW	PR2_Value
-00480 0075 009B 		MOVWF	PR2
-00481 0076 0021 		MOVLB	1	;Bank 1
-00482 0077 1491 		BSF	PIE1,TMR2IE
-00483 0078 0020 		movlb	0                      ;Bank 0
-00484 0079 	;
-00485 0079 	; setup ccp1
-00486 0079 	;
-00487 0079 1672 		BSF	ServoOff
-00488 007A 0022 		movlb	2                      ;bank 2
-00489 007B 141D 		BSF	APFCON,CCP1SEL	;RA5
-00490 007C 0025 		movlb	5                      ;bank 5
-00491 007D 0193 		CLRF	CCP1CON
-00492 007E 	;
+00393 003A 2850 		GOTO	IRQ_Servo1_OL	; No
+00394 003B 	; An output just went high
+00395 003B 	;
+00396 003B 0870 		MOVF	SigOutTime,W	;Put the pulse into the CCP reg.
+00397 003C 0791 		ADDWF	CCPR1L,F
+00398 003D 0871 		MOVF	SigOutTime+1,W
+00399 003E 3D92 		ADDWFC	CCPR1H,F
+00400 003F 0020 		movlb	0	;Bank 0
+00401 0040 300A 		movlw	CCP1CON_Int
+00402 0041 1CB8 		btfss	InPosShutdown
+00403 0042 3009 		MOVLW	CCP1CON_Clr	;Clear output on match
+00404 0043 1D38 		btfss	InPosition
+00405 0044 3009 		MOVLW	CCP1CON_Clr	;Clear output on match
+00406 0045 0025 		movlb	5	;Bank 5
+00407 0046 0093 		MOVWF	CCP1CON	;CCP1 clr on match
+00408 0047 	;Calculate dwell time
+00409 0047 3000 		MOVLW	LOW kServoDwellTime
+00410 0048 00F5 		MOVWF	CalcdDwell
+00411 0049 307D 		MOVLW	HIGH kServoDwellTime
+00412 004A 00F6 		MOVWF	CalcdDwellH
+00413 004B 0870 		MOVF	SigOutTime,W
+00414 004C 02F5 		SUBWF	CalcdDwell,F
+00415 004D 0871 		MOVF	SigOutTime+1,W
+00416 004E 3BF6 		SUBWFB	CalcdDwellH,F
+00417 004F 285C 		GOTO	IRQ_Servo1_X
+00418 0050 	;
+00419 0050 	; output went low so this cycle is done
+00420 0050 3000 	IRQ_Servo1_OL	MOVLW	LOW kServoDwellTime
+00421 0051 0791 		ADDWF	CCPR1L,F
+00422 0052 307D 		MOVLW	HIGH kServoDwellTime
+00423 0053 3D92 		ADDWFC	CCPR1H,F
+00424 0054 	;
+00425 0054 0020 		movlb	0	;Bank 0
+00426 0055 300A 		movlw	CCP1CON_Int
+00427 0056 1CB8 		btfss	InPosShutdown
+00428 0057 3008 		MOVLW	CCP1CON_Set	;Set output on match
+00429 0058 1D38 		btfss	InPosition
+00430 0059 3008 		MOVLW	CCP1CON_Set	;Set output on match
+00431 005A 0025 		movlb	5	;Bank 5
+00432 005B 0093 		MOVWF	CCP1CON	;Idle output low
+00433 005C 	;
+00434 005C 0020 	IRQ_Servo1_X	MOVLB	0x00                   ;Bank 0
+00435 005D 1111 		BCF	PIR1,CCP1IF
+00436 005E 	IRQ_Servo1_End:
+00437 005E 	;--------------------------------------------------------------------
+00438 005E 	;
+00439 005E 0009 		retfie		; return from interrupt
+00440 005F 	;
+00441 005F 	;
+00442 005F 	;==============================================================================================
+00443 005F 	;**********************************************************************************************
+00444 005F 	;==============================================================================================
+00445 005F 	;
+00446 005F 0021 	start	MOVLB	0x01	; select bank 1
+00447 0060 1795 		bsf	OPTION_REG,NOT_WPUEN	; disable pullups on port B
+00448 0061 1295 		bcf	OPTION_REG,TMR0CS	; TMR0 clock Fosc/4
+00449 0062 1195 		bcf	OPTION_REG,PSA	; prescaler assigned to TMR0
+00450 0063 1415 		bsf	OPTION_REG,PS0	;111 8mhz/4/256=7812.5hz=128uS/Ct=0.032768S/ISR
+00451 0064 1495 		bsf	OPTION_REG,PS1	;101 8mhz/4/64=31250hz=32uS/Ct=0.008192S/ISR
+00452 0065 1515 		bsf	OPTION_REG,PS2
+00453 0066 	;
+00454 0066 3072 		MOVLW	OSCCON_Value
+00455 0067 0099 		MOVWF	OSCCON
+00456 0068 3017 		movlw	b'00010111'	; WDT prescaler 1:65536 period is 2 sec (RESET value)
+00457 0069 0097 		movwf	WDTCON
+00458 006A 	;
+00459 006A 0023 		MOVLB	0x03	; bank 3
+00460 006B 	;
+00461 006B 		if HasBattV
+00462 006B 3001 		MOVLW	0x01
+00463 006C 		else
+00465 006C 		endif
+00466 006C 	;
+00467 006C 008C 		MOVWF	ANSELA	;AN0 only
+00468 006D 	;
+00469 006D 	; setup timer 1 for 0.5uS/count
+00470 006D 	;
+00471 006D 0020 		movlb	0	; bank 0
+00472 006E 3001 		MOVLW	T1CON_Val
+00473 006F 0098 		MOVWF	T1CON
+00474 0070 1399 		bcf	T1GCON,TMR1GE
+00475 0071 	;
+00476 0071 	; clear memory to zero
+00477 0071 21FF 		CALL	ClearRam
+00478 0072 	;
+00479 0072 	; Setup timer 2 for 0.01S/Interupt
+00480 0072 304E 		MOVLW	T2CON_Value	;Setup T2 for 100/s
+00481 0073 009C 		MOVWF	T2CON
+00482 0074 307D 		MOVLW	PR2_Value
+00483 0075 009B 		MOVWF	PR2
+00484 0076 0021 		MOVLB	1	;Bank 1
+00485 0077 1491 		BSF	PIE1,TMR2IE
+00486 0078 0020 		movlb	0                      ;Bank 0
+00487 0079 	;
+00488 0079 	; setup ccp1
+00489 0079 	;
+00490 0079 1672 		BSF	ServoOff
+00491 007A 0022 		movlb	2                      ;bank 2
+00492 007B 141D 		BSF	APFCON,CCP1SEL	;RA5
 RocketServo.asm                                                       Page: 6
 /Users/davidflynn/Projects/Rocket-Servo/Firmware Rev B/
 
-00493 007E 0021 		MOVLB	0x01	;Bank 1
-00494 007F 1511 		bsf	PIE1,CCP1IE
-00495 0080 	;
-00496 0080 	; setup data ports
-00497 0080 0020 		movlb                  0                      ;bank 0
-00498 0081 3000 		MOVLW	PortAValue
-00499 0082 008C 		MOVWF	PORTA	;Init PORTA
-00500 0083 0021 		movlb                  1                      ;bank 1
-00501 0084 30DF 		MOVLW	PortADDRBits
-00502 0085 008C 		MOVWF	TRISA
-00503 0086 	;
-00504 0086 0020 		MOVLB	0	;bank 0
-00505 0087 0064 		CLRWDT
-00506 0088 	;
-00507 0088 3064 		MOVLW	LEDTIME
-00508 0089 00A1 		MOVWF	LED_Time
-00509 008A 3001 		movlw	0x01	;continuos ON
-00510 008B 00A2 		movwf	LED2_Time
-00511 008C 	;
-00512 008C 0064 		CLRWDT
-00513 008D 220F 		CALL	CopyToRam
-00514 008E 0064 		CLRWDT
-00515 008F 	;
-00516 008F 	;
-00517 008F 170B 		bsf	INTCON,PEIE	; enable periferal interupts
-00518 0090 	;	bsf	INTCON,T0IE	; enable TMR0 interupt
-00519 0090 178B 		bsf	INTCON,GIE	; enable interupts
-00520 0091 	;
-00521 0091 0020 		MOVLB	0x00	;bank 0
-00522 0092 3004 		movlw	0x04
-00523 0093 00AE 		movwf	Timer4Lo	;power up delay
-00524 0094 	;
-00525 0094 	;=========================================================================================
-00526 0094 	;=========================================================================================
-00527 0094 	;  Main Loop
-00528 0094 	;
-00529 0094 		if HasBattV
-00530 0094 2196 		CALL	ReadAN0_ColdStart
-00531 0095 20AF 		CALL	LongFlash
-00532 0096 	;
-00533 0096 2188 		CALL	ReadAN0
-00534 0097 2188 		CALL	ReadAN0
-00535 0098 	; devide by 8
-00536 0098 36FD 		lsrf	Param7D,F
-00537 0099 0CFC 		rrf	Param7C,F
-00538 009A 36FD 		lsrf	Param7D,F
-00539 009B 0CFC 		rrf	Param7C,F
-00540 009C 36FD 		lsrf	Param7D,F
-00541 009D 0CFC 		rrf	Param7C,F
-00542 009E 	;
-00543 009E 3032 		movlw	.50	; 1/2 second
-00544 009F 00A1 		movwf	LED_Time
-00545 00A0 087C 		movf	Param7C,W
-00546 00A1 00A5 		movwf	LED_Blinks
-00547 00A2 	;
-00548 00A2 0064 	Start_L1	CLRWDT
-00549 00A3 0825 		movf	LED_Blinks,W
-00550 00A4 		SKPZ
-00550 00A4 1D03      M		BTFSS	STATUS,Z		BTFSS	STATUS,Z
-00551 00A5 33FC 		BRA	Start_L1
-00552 00A6 20B6 		CALL	Delay_1S
-00553 00A7 	;
-00554 00A7 20AF 		CALL	LongFlash
-00555 00A8 	;
-00556 00A8 		endif
-00557 00A8 	; normal system blinks
-00558 00A8 3064 		MOVLW	LEDTIME
-00559 00A9 00A1 		MOVWF	LED_Time
-00560 00AA 30FF 		movlw	0xFF
-00561 00AB 00A5 		movwf	LED_Blinks
-00562 00AC 	;
-00563 00AC 219E 		CALL	StartServo
-00564 00AD 20BD 		CALL	HomeServo
-00565 00AE 3216 		BRA	MainLoop
-00566 00AF 	;
-00567 00AF 	;==============================================
-00568 00AF 	; One second ON one second OFF
-00569 00AF 3064 	LongFlash	movlw	.100
-00570 00B0 00A5 		movwf	LED_Blinks
-00571 00B1 3001 		movlw	0x01	;constant ON
-00572 00B2 00A1 		movwf	LED_Time
-00573 00B3 0825 	LongFlash_L1	movf	LED_Blinks,W
-00574 00B4 		SKPZ
-00574 00B4 1D03      M		BTFSS	STATUS,Z		BTFSS	STATUS,Z
-00575 00B5 33FD 		BRA	LongFlash_L1
-00576 00B6 	;
-00577 00B6 3064 	Delay_1S	movlw	.100
-00578 00B7 00A8 		movwf	Timer1Lo
-00579 00B8 0828 	Delay_L1	movf	Timer1Lo,W
-00580 00B9 		SKPZ
-00580 00B9 1D03      M		BTFSS	STATUS,Z		BTFSS	STATUS,Z
-00581 00BA 33FD 		bra	Delay_L1
-00582 00BB 0064 		CLRWDT
-00583 00BC 0008 		return
-00584 00BD 	;
-00585 00BD 	;==============================================
-00586 00BD 0020 	HomeServo	movlb	0	;Bank0
-00587 00BE 12F2 		bcf	SMRevFlag
-00588 00BF 1172 		bcf	LED2Flag
+00493 007C 0025 		movlb	5                      ;bank 5
+00494 007D 0193 		CLRF	CCP1CON
+00495 007E 	;
+00496 007E 0021 		MOVLB	0x01	;Bank 1
+00497 007F 1511 		bsf	PIE1,CCP1IE
+00498 0080 	;
+00499 0080 	; setup data ports
+00500 0080 0020 		movlb                  0                      ;bank 0
+00501 0081 3000 		MOVLW	PortAValue
+00502 0082 008C 		MOVWF	PORTA	;Init PORTA
+00503 0083 0021 		movlb                  1                      ;bank 1
+00504 0084 30DF 		MOVLW	PortADDRBits
+00505 0085 008C 		MOVWF	TRISA
+00506 0086 	;
+00507 0086 0020 		MOVLB	0	;bank 0
+00508 0087 0064 		CLRWDT
+00509 0088 	;
+00510 0088 3064 		MOVLW	LEDTIME
+00511 0089 00A1 		MOVWF	LED_Time
+00512 008A 3001 		movlw	0x01	;continuos ON
+00513 008B 00A2 		movwf	LED2_Time
+00514 008C 	;
+00515 008C 0064 		CLRWDT
+00516 008D 220F 		CALL	CopyToRam
+00517 008E 0064 		CLRWDT
+00518 008F 	;
+00519 008F 	;
+00520 008F 170B 		bsf	INTCON,PEIE	; enable periferal interupts
+00521 0090 	;	bsf	INTCON,T0IE	; enable TMR0 interupt
+00522 0090 178B 		bsf	INTCON,GIE	; enable interupts
+00523 0091 	;
+00524 0091 0020 		MOVLB	0x00	;bank 0
+00525 0092 3004 		movlw	0x04
+00526 0093 00AE 		movwf	Timer4Lo	;power up delay
+00527 0094 	;
+00528 0094 	;=========================================================================================
+00529 0094 	;=========================================================================================
+00530 0094 	;  Main Loop
+00531 0094 	;
+00532 0094 		if HasBattV
+00533 0094 2196 		CALL	ReadAN0_ColdStart
+00534 0095 20AF 		CALL	LongFlash
+00535 0096 	;
+00536 0096 2188 		CALL	ReadAN0
+00537 0097 2188 		CALL	ReadAN0
+00538 0098 	; devide by 8
+00539 0098 36FD 		lsrf	Param7D,F
+00540 0099 0CFC 		rrf	Param7C,F
+00541 009A 36FD 		lsrf	Param7D,F
+00542 009B 0CFC 		rrf	Param7C,F
+00543 009C 36FD 		lsrf	Param7D,F
+00544 009D 0CFC 		rrf	Param7C,F
+00545 009E 	;
+00546 009E 3032 		movlw	.50	; 1/2 second
+00547 009F 00A1 		movwf	LED_Time
+00548 00A0 087C 		movf	Param7C,W
+00549 00A1 00A5 		movwf	LED_Blinks
+00550 00A2 	;
+00551 00A2 0064 	Start_L1	CLRWDT
+00552 00A3 0825 		movf	LED_Blinks,W
+00553 00A4 		SKPZ
+00553 00A4 1D03      M		BTFSS	STATUS,Z		BTFSS	STATUS,Z
+00554 00A5 33FC 		BRA	Start_L1
+00555 00A6 20B6 		CALL	Delay_1S
+00556 00A7 	;
+00557 00A7 20AF 		CALL	LongFlash
+00558 00A8 	;
+00559 00A8 		endif
+00560 00A8 	; normal system blinks
+00561 00A8 3064 		MOVLW	LEDTIME
+00562 00A9 00A1 		MOVWF	LED_Time
+00563 00AA 30FF 		movlw	0xFF
+00564 00AB 00A5 		movwf	LED_Blinks
+00565 00AC 	;
+00566 00AC 219E 		CALL	StartServo
+00567 00AD 20BD 		CALL	HomeServo
+00568 00AE 3216 		BRA	MainLoop
+00569 00AF 	;
+00570 00AF 	;==============================================
+00571 00AF 	; One second ON one second OFF
+00572 00AF 3064 	LongFlash	movlw	.100
+00573 00B0 00A5 		movwf	LED_Blinks
+00574 00B1 3001 		movlw	0x01	;constant ON
+00575 00B2 00A1 		movwf	LED_Time
+00576 00B3 0825 	LongFlash_L1	movf	LED_Blinks,W
+00577 00B4 		SKPZ
+00577 00B4 1D03      M		BTFSS	STATUS,Z		BTFSS	STATUS,Z
+00578 00B5 33FD 		BRA	LongFlash_L1
+00579 00B6 	;
+00580 00B6 3064 	Delay_1S	movlw	.100
+00581 00B7 00A8 		movwf	Timer1Lo
+00582 00B8 0828 	Delay_L1	movf	Timer1Lo,W
+00583 00B9 		SKPZ
+00583 00B9 1D03      M		BTFSS	STATUS,Z		BTFSS	STATUS,Z
+00584 00BA 33FD 		bra	Delay_L1
+00585 00BB 0064 		CLRWDT
+00586 00BC 0008 		return
+00587 00BD 	;
+00588 00BD 	;==============================================
 RocketServo.asm                                                       Page: 7
 /Users/davidflynn/Projects/Rocket-Servo/Firmware Rev B/
 
-00589 00C0 302C 		movlw	Low ActivationTime
-00590 00C1 00AC 		movwf	Timer3Lo
-00591 00C2 3001 		movlw	High ActivationTime
-00592 00C3 00AD 		movwf	Timer3Hi
-00593 00C4 0008 		return
-00594 00C5 	;
-00595 00C5 	;=========================================================================================
-00596 00C5 	;
-00597 00C5 0002 	BtnChangeRate	EQU	0x02	;change by 1uS per 0.05 seconds
-00598 00C5 0010 	SlewChangeRate	EQU	0x10	;change by 8uS per 0.01 seconds
+00589 00BD 0020 	HomeServo	movlb	0	;Bank0
+00590 00BE 12F2 		bcf	SMRevFlag
+00591 00BF 1172 		bcf	LED2Flag
+00592 00C0 302C 		movlw	Low ActivationTime
+00593 00C1 00AC 		movwf	Timer3Lo
+00594 00C2 3001 		movlw	High ActivationTime
+00595 00C3 00AD 		movwf	Timer3Hi
+00596 00C4 0008 		return
+00597 00C5 	;
+00598 00C5 	;=========================================================================================
 00599 00C5 	;
 00600 00C5 0064 	MainLoop	CLRWDT
 00601 00C6 0020 		MOVLB	0x00                   ;Bank 0
@@ -780,7 +780,7 @@ RocketServo.asm                                                       Page: 1
 00744 0130 1C77 		btfss	Param77,0	;CurPos<=Dest?
 00745 0131 320C 		bra	Move_It_Neg	; No, CurPos>Dest
 00746 0132 	;CurPos<Dest, so move CurPos positive
-00747 0132 3010 		movlw	SlewChangeRate
+00747 0132 3040 		movlw	SlewChangeRate
 00748 0133 07FC 		addwf	Param7C,F
 00749 0134 3000 		movlw	0x00
 00750 0135 3DFD 		addwfc	Param7D,F
@@ -797,7 +797,7 @@ RocketServo.asm                                                       Page: 1
 00761 013D 320C 		bra	Move_It_Now
 00762 013E 	;
 00763 013E 	Move_It_Neg
-00764 013E 3010 		movlw	SlewChangeRate
+00764 013E 3040 		movlw	SlewChangeRate
 00765 013F 02FC 		subwf	Param7C,F
 00766 0140 3000 		movlw	0x00
 00767 0141 3BFD 		subwfb	Param7D,F
@@ -1480,8 +1480,8 @@ IRQ_Servo1_1 ^	0038 	IRQ_2
 IRQ_Servo1_End ^	005E 	IRQ_2
 IRQ_Servo1_OL ^	0050 	IRQ_Servo1_1
 IRQ_Servo1_X ^	005C 	IRQ_2, IRQ_Servo1_1
-kDefaultPosition1	0C80 	EEWriteLoop
-kDefaultPosition2	0AF0 	EEWriteLoop
+kDefaultPosition1	0E10 	EEWriteLoop
+kDefaultPosition2	0898 	EEWriteLoop
 kInPosShutdown	0002 	EEWriteLoop
 kMaxPulseWidth	1068 	ClampInt, ClampInt_tooHigh
 kMidPulseWidth	0BB8 	MainLoop, SS_Start_Loop
@@ -1573,7 +1573,7 @@ SetDestAsCur ^	01C8 	SS_Start_Loop
 SetTrue ^	01FD 	Param7D_LE_Param79
 SigOutTime	0070 	IRQ_Servo1_1, Copy7CToSig, Copy7CToSig_1
 SigOutTimeH	0071 	Copy7CToSig, Copy7CToSig_1
-SlewChangeRate	0010 	Move_It_NIP, Move_It_Neg
+SlewChangeRate	0040 	Move_It_NIP, Move_It_Neg
 SMRevFlag	Flags,5	HomeServo, ML_Btns_End, ML_CmdNormal, CopyTempToPos, CopyPosToTemp
 		CopyPosToDest, SS_Start_Loop
 SS_Start_Loop ^	01A2 	SS_Start_Loop

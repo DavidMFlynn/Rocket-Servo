@@ -120,8 +120,8 @@ kDefaultPosition1	EQU	d'2000'	;1000uS Locked
 kDefaultPosition2	EQU	d'4110'	;2055uS Open
 HoldOpen	EQU	1
 	else
-kDefaultPosition1	EQU	kMidPulseWidth+d'200'
-kDefaultPosition2	EQU	kMidPulseWidth-d'200'
+kDefaultPosition1	EQU	d'3600'	;1800
+kDefaultPosition2	EQU	d'2200'	;1100
 HoldOpen	EQU	0
 	endif
 kServoDwellTime	EQU	d'32000'	;16mS
@@ -255,6 +255,9 @@ CCP1CON_Value	EQU	0x00	;CCP1 off
 #Define	NewSWData	Flags,6
 ;
 ServoMoveTime	EQU	.300	;time servo is powered when CMD changes
+;
+BtnChangeRate	EQU	0x02	;change by 1uS per 0.05 seconds
+SlewChangeRate	EQU	0x40	;change by 8uS per 0.01 seconds
 ;
 ;=========================================================================================
 ;Conditionals
@@ -593,9 +596,6 @@ HomeServo	movlb	0	;Bank0
 	return
 ;
 ;=========================================================================================
-;
-BtnChangeRate	EQU	0x02	;change by 1uS per 0.05 seconds
-SlewChangeRate	EQU	0x10	;change by 8uS per 0.01 seconds
 ;
 MainLoop	CLRWDT
 	MOVLB	0x00                   ;Bank 0
