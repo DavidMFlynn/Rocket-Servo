@@ -7,7 +7,7 @@
 	(title_block
 		(title "Rocket Servo")
 		(date "2024-09-23")
-		(rev "C")
+		(rev "C1")
 		(company "DMFE")
 		(comment 1 "Altimeter triggered servo")
 	)
@@ -3883,13 +3883,14 @@
 		)
 		(uuid "1e031c5a-d59a-4884-9832-75b7f80feae9")
 	)
-	(text "Rev C, 6V servo power, Continuity check."
+	(text "Rev C1, SOIC 8 footprint changed\nRev C, 6V servo power, Continuity check."
 		(exclude_from_sim no)
-		(at 49.53 189.992 0)
+		(at 25.654 189.23 0)
 		(effects
 			(font
 				(size 1.524 1.524)
 			)
+			(justify left)
 		)
 		(uuid "4e6e6566-ce7a-4855-8117-33a0153343ac")
 	)
@@ -3986,7 +3987,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Package_SO:SOIC-8_5.23x5.23mm_P1.27mm"
+		(property "Footprint" "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm"
 			(at 110.49 124.46 0)
 			(effects
 				(font
