@@ -3852,7 +3852,7 @@
 		)
 		(uuid "0d585116-a8f2-4f11-8995-65a809d545bb")
 	)
-	(text "R1     470Ω\nR2,R6,R8,R11,R12   1.0KΩ\nR3   10KΩ\nR4   220Ω\nR5,R7   47KΩ\nR9    270Ω\nR10   22KΩ\nD1  SMA 1A\nC1,C3,C4,C6,C7  0.1uf 0805\nC2  33uf\nC5  220uf\nP2  3 pin sip pin header\nIC1 PIV12F1822-I/P SOIC-8\nU1  L7805 DPAK\nU2  ua78L05\nU3,U4 CPC1017N\nSW1,SW2 KXT341 LHS\n"
+	(text "R1     470Ω\nR2,R6,R8,R11,R12   1.0KΩ\nR3   10KΩ\nR4   220Ω\nR5,R7   47KΩ\nR9    270Ω\nR10   22KΩ\nD1  SMA 1A\nC1,C3,C4,C6,C7  0.1uf 0805\nC2  33uf\nC5  220uf\nP2  3 pin sip pin header or pig-tail\nIC1 PIC12F1822-I/P SOIC-8\nU1  L7806ABD2T D2PAK\nU2  ua78L05\nU3,U4 CPC1017N\nSW1,SW2 KXT341 LHS\n"
 		(exclude_from_sim no)
 		(at 25.4 157.48 0)
 		(effects
@@ -3920,7 +3920,6 @@
 	)
 	(label "Enable*"
 		(at 128.27 93.98 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.524 1.524)
@@ -3931,7 +3930,6 @@
 	)
 	(label "BattV"
 		(at 152.4 116.84 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.524 1.524)
