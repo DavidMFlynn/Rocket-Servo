@@ -190,183 +190,183 @@ RocketServo.asm                                                       Page: 1
 00181 0000 	;
 00182 0000 		cblock	0x20
 00183 0000 	;
-00184 0000 0020 		ISR_Temp		;scratch mem
-00185 0000 0021 		LED_Time
-00186 0000 0022 		LED2_Time
-00187 0000 0023 		LED_Ticks		;Timer tick count
-00188 0000 0024 		LED2_Ticks
-00189 0000 0025 		LED_Blinks		;nBlinks, 0xFF=system blink, 0=Off
-00190 0000 	;
-00191 0000 	;
-00192 0000 0026 		EEAddrTemp		;EEProm address to read or write
-00193 0000 0027 		EEDataTemp		;Data to be writen to EEProm
-00194 0000 	;
-00195 0000 	;
+00184 0000 0020 M		ISR_Temp		;scratch mem
+00185 0000 0021 M		LED_Time
+00186 0000 0022 M		LED2_Time
+00187 0000 0023 M		LED_Ticks		;Timer tick count
+00188 0000 0024 M		LED2_Ticks
+00189 0000 0025 M		LED_Blinks		;nBlinks, 0xFF=system blink, 0=Off
+00190 0000      M	;
+00191 0000      M	;
+00192 0000 0026 M		EEAddrTemp		;EEProm address to read or write
+00193 0000 0027 M		EEDataTemp		;Data to be writen to EEProm
+00194 0000      M	;
+00195 0000      M	;
 RocketServo.asm                                                       Page: 3
 /Users/davidflynn/Projects/Rocket-Servo/Firmware Rev C/
 
-00196 0000 0028 		Timer1Lo		;1st 16 bit timer
-00197 0000 0029 		Timer1Hi		; not used
-00198 0000 002A 		Timer2Lo		;2nd 16 bit timer
-00199 0000 002B 		Timer2Hi		; Servo active timer
-00200 0000 002C 		Timer3Lo		;3rd 16 bit timer
-00201 0000 002D 		Timer3Hi		; Activation timer
-00202 0000 002E 		Timer4Lo		;4th 16 bit timer
-00203 0000 002F 		Timer4Hi		; debounce timer and power up delay timer
-00204 0000 	;
-00205 0000 0030 		Dest:2
-00206 0000 0032 		CurPos:2
-00207 0000 	;
-00208 0000 0034 		Position1:2
-00209 0000 0036 		Position2:2
-00210 0000 0038 		SysFlags
-00211 0000 	;
-00212 0000 0039 		Debounce
-00213 0000 	;
-00214 0000 		endc
-00215 0000 	;
-00216 0000 0038 	#Define	PulseSent	SysFlags,0
-00217 0000 0038 	#Define	InPosShutdown	SysFlags,1
-00218 0000 0038 	#Define	InPosition	SysFlags,2
-00219 0000 0038 	#Define	BattV_OK	SysFlags,3
-00220 0000 	;
-00221 0000 0034 	#Define	FirstRAMParam	Position1
-00222 0000 0038 	#Define	LastRAMParam	SysFlags
-00223 0000 	;
-00224 0000 	;================================================================================================
-00225 0000 	;  Bank1 Ram 0A0h-0BFh 32 Bytes
-00226 0000 	;
-00227 0000 	;
-00228 0000 	;=======================================================================================================
-00229 0000 	;  Common Ram 70-7F same for all banks
-00230 0000 	;      except for ISR_W_Temp these are used for paramiter passing and temp vars
-00231 0000 	;=======================================================================================================
-00232 0000 	;
-00233 0000 		cblock	0x70
-00234 0000 0070 		SigOutTime
-00235 0000 0071 		SigOutTimeH
-00236 0000 0072 		Flags
-00237 0000 	;
-00238 0000 0073 		Param73
-00239 0000 0074 		Param74
-00240 0000 	;
-00241 0000 0075 		CalcdDwell
-00242 0000 0076 		CalcdDwellH
-00243 0000 0077 		Param77
-00244 0000 0078 		Param78
-00245 0000 0079 		Param79
-00246 0000 007A 		Param7A
-00247 0000 007B 		Param7B
-00248 0000 007C 		Param7C
-00249 0000 007D 		Param7D
-00250 0000 007E 		Param7E
-00251 0000 007F 		Param7F
-00252 0000 		endc
-00253 0000 	;
-00254 0000 	; Flags bits
-00255 0000 0072 	#Define	IncBtnFlag	Flags,0
-00256 0000 0072 	#Define	DecBtnFlag	Flags,1
-00257 0000 0072 	#Define	LED2Flag	Flags,2
-00258 0000 0072 	#Define	DataChangedFlag	Flags,3
-00259 0000 0072 	#Define	ServoOff	Flags,4
-00260 0000 0072 	#Define	SMRevFlag	Flags,5
-00261 0000 0072 	#Define	NewSWData	Flags,6
-00262 0000 	;
-00263 0000 012C 	ServoMoveTime	EQU	.300	;time servo is powered when CMD changes
-00264 0000 	;
-00265 0000 0002 	BtnChangeRate	EQU	0x02	;change by 1uS per 0.05 seconds
-00266 0000 0040 	SlewChangeRate	EQU	0x40	;change by 8uS per 0.01 seconds
-00267 0000 	;
-00268 0000 	;=========================================================================================
-00269 0000 	;Conditionals
-00270 0000 0080 	HasISR	EQU	0x80	;used to enable interupts 0x80=true 0x00=false
-00271 0000 	;
-00272 0000 	;=========================================================================================
-00273 0000 	;==============================================================================================
-00274 0000 	; ID Locations
-00275 0000 		__idlocs	0x12B1
-00276 0000 	;
-00277 0000 	;==============================================================================================
-00278 0000 	; EEPROM locations (NV-RAM) 0x00..0x7F (offsets)
-00279 0000 		org	0xF000
-00280 F000 	;
-00281 F000 0010 		de	LOW kDefaultPosition1	;nvPosition1Lo
-00282 F001 000E 		de	HIGH kDefaultPosition1
-00283 F002 0098 		de	LOW kDefaultPosition2
-00284 F003 0008 		de	HIGH kDefaultPosition2
-00285 F004 	;
-00286 F004 0002 		de	kInPosShutdown	;nvSysFlags
-00287 F005 	;
-00288 F005 		cblock	0x00
-00289 F005 0000 		nvPosition1Lo
-00290 F005 0001 		nvPosition1Hi
-00291 F005 0002 		nvPosition2Lo
-00292 F005 0003 		nvPosition2Hi
-00293 F005 	;
-00294 F005 0004 		nvSysFlags
+00196 0000 0028 M		Timer1Lo		;1st 16 bit timer
+00197 0000 0029 M		Timer1Hi		; not used
+00198 0000 002A M		Timer2Lo		;2nd 16 bit timer
+00199 0000 002B M		Timer2Hi		; Servo active timer
+00200 0000 002C M		Timer3Lo		;3rd 16 bit timer
+00201 0000 002D M		Timer3Hi		; Activation timer
+00202 0000 002E M		Timer4Lo		;4th 16 bit timer
+00203 0000 002F M		Timer4Hi		; debounce timer and power up delay timer
+00204 0000      M	;
+00205 0000 0030 M		Dest:2
+00206 0000 0032 M		CurPos:2
+00207 0000      M	;
+00208 0000 0034 M		Position1:2
+00209 0000 0036 M		Position2:2
+00210 0000 0038 M		SysFlags
+00211 0000      M	;
+00212 0000 0039 M		Debounce
+00213 0000      M	;
+00214 0000      M		endc
+00215 0000      M	;
+00216 0000 0038 M	#Define	PulseSent	SysFlags,0
+00217 0000 0038 M	#Define	InPosShutdown	SysFlags,1
+00218 0000 0038 M	#Define	InPosition	SysFlags,2
+00219 0000 0038 M	#Define	BattV_OK	SysFlags,3
+00220 0000      M	;
+00221 0000 0034 M	#Define	FirstRAMParam	Position1
+00222 0000 0038 M	#Define	LastRAMParam	SysFlags
+00223 0000      M	;
+00224 0000      M	;================================================================================================
+00225 0000      M	;  Bank1 Ram 0A0h-0BFh 32 Bytes
+00226 0000      M	;
+00227 0000      M	;
+00228 0000      M	;=======================================================================================================
+00229 0000      M	;  Common Ram 70-7F same for all banks
+00230 0000      M	;      except for ISR_W_Temp these are used for paramiter passing and temp vars
+00231 0000      M	;=======================================================================================================
+00232 0000      M	;
+00233 0000      M		cblock	0x70
+00234 0000 0070 M		SigOutTime
+00235 0000 0071 M		SigOutTimeH
+00236 0000 0072 M		Flags
+00237 0000      M	;
+00238 0000 0073 M		Param73
+00239 0000 0074 M		Param74
+00240 0000      M	;
+00241 0000 0075 M		CalcdDwell
+00242 0000 0076 M		CalcdDwellH
+00243 0000 0077 M		Param77
+00244 0000 0078 M		Param78
+00245 0000 0079 M		Param79
+00246 0000 007A M		Param7A
+00247 0000 007B M		Param7B
+00248 0000 007C M		Param7C
+00249 0000 007D M		Param7D
+00250 0000 007E M		Param7E
+00251 0000 007F M		Param7F
+00252 0000      M		endc
+00253 0000      M	;
+00254 0000      M	; Flags bits
+00255 0000 0072 M	#Define	IncBtnFlag	Flags,0
+00256 0000 0072 M	#Define	DecBtnFlag	Flags,1
+00257 0000 0072 M	#Define	LED2Flag	Flags,2
+00258 0000 0072 M	#Define	DataChangedFlag	Flags,3
+00259 0000 0072 M	#Define	ServoOff	Flags,4
+00260 0000 0072 M	#Define	SMRevFlag	Flags,5
+00261 0000 0072 M	#Define	NewSWData	Flags,6
+00262 0000      M	;
+00263 0000 012C M	ServoMoveTime	EQU	.300	;time servo is powered when CMD changes
+00264 0000      M	;
+00265 0000 0002 M	BtnChangeRate	EQU	0x02	;change by 1uS per 0.05 seconds
+00266 0000 0040 M	SlewChangeRate	EQU	0x40	;change by 8uS per 0.01 seconds
+00267 0000      M	;
+00268 0000      M	;=========================================================================================
+00269 0000      M	;Conditionals
+00270 0000 0080 M	HasISR	EQU	0x80	;used to enable interupts 0x80=true 0x00=false
+00271 0000      M	;
+00272 0000      M	;=========================================================================================
+00273 0000      M	;==============================================================================================
+00274 0000      M	; ID Locations
+00275 0000      M		__idlocs	0x12B1
+00276 0000      M	;
+00277 0000      M	;==============================================================================================
+00278 0000      M	; EEPROM locations (NV-RAM) 0x00..0x7F (offsets)
+00279 0000      M		org	0xF000
+00280 F000      M	;
+00281 F000 0010      M		de	LOW kDefaultPosition1	;nvPosition1Lo
+00282 F001 000E      M		de	HIGH kDefaultPosition1
+00283 F002 0098      M		de	LOW kDefaultPosition2
+00284 F003 0008      M		de	HIGH kDefaultPosition2
+00285 F004      M	;
+00286 F004 0002      M		de	kInPosShutdown	;nvSysFlags
+00287 F005      M	;
+00288 F005      M		cblock	0x00
+00289 F005 0000 M		nvPosition1Lo
+00290 F005 0001 M		nvPosition1Hi
+00291 F005 0002 M		nvPosition2Lo
+00292 F005 0003 M		nvPosition2Hi
+00293 F005      M	;
+00294 F005 0004 M		nvSysFlags
 RocketServo.asm                                                       Page: 4
 /Users/davidflynn/Projects/Rocket-Servo/Firmware Rev C/
 
-00295 F005 		endc
-00296 F005 	;
-00297 F005 0000 	#Define	nvFirstParamByte	nvPosition1Lo
-00298 F005 0004 	#Define	nvLastParamByte	nvSysFlags
-00299 F005 	;
-00300 F005 	;
-00301 F005 	;==============================================================================================
-00302 F005 	;============================================================================================
-00303 F005 	;
-00304 F005 	;
-00305 F005 		ORG	0x000	; processor reset vector
-00306 0000 0183 		CLRF	STATUS
-00307 0001 018A 		CLRF	PCLATH
-00308 0002 285F 	  	goto	start	; go to beginning of program
-00309 0003 	;
-00310 0003 	;===============================================================================================
-00311 0003 	; Interupt Service Routine
-00312 0003 	;
-00313 0003 	; we loop through the interupt service routing every 0.01 seconds
-00314 0003 	;
-00315 0003 	;
-00316 0003 		ORG	0x004	; interrupt vector location
-00317 0004 0020 		movlb	0	; bank0
-00318 0005 	;
-00319 0005 1C91 		btfss	PIR1,TMR2IF
-00320 0006 282F 		goto	IRQ_2
-00321 0007 1091 		bcf	PIR1,TMR2IF	; reset interupt flag bit
-00322 0008 	;
-00323 0008 	;Decrement timers until they are zero
-00324 0008 	;
-00325 0008 0185 		CLRF	FSR0H
-00326 0009 224B 		call	DecTimer1	;if timer 1 is not zero decrement
-00327 000A 2249 		call	DecTimer2
-00328 000B 2247 		call	DecTimer3
-00329 000C 2245 		call	DecTimer4
-00330 000D 	;
-00331 000D 	;-----------------------------------------------------------------
-00332 000D 	; blink LEDs
-00333 000D 0021 		movlb                  1                      ;bank 1
-00334 000E 160C 		BSF	SysLEDTrisBit	;LED off
-00335 000F 150C 		BSF	LED2TrisBit	;LED2 off
-00336 0010 	;
-00337 0010 0020 		movlb	0	;bank 0
-00338 0011 1072 		BCF	IncBtnFlag
-00339 0012 1D0C 		BTFSS	IncBtnBit
-00340 0013 1472 		BSF	IncBtnFlag
-00341 0014 	;
-00342 0014 10F2 		BCF	DecBtnFlag
-00343 0015 1E0C 		BTFSS	DecBtnBit
-00344 0016 14F2 		BSF	DecBtnFlag
-00345 0017 	;
-00346 0017 1772 		bsf	NewSWData	;New data every 0.01s
-00347 0018 	;
-00348 0018 0BA3 	SystemBlink_1	DECFSZ	LED_Ticks,F	;Time to blink?
-00349 0019 320B 		bra	SystemBlink_end	; no
-00350 001A 	;
-00351 001A 0821 		MOVF	LED_Time,W
-00352 001B 00A3 		movwf	LED_Ticks
-00353 001C 	;
-00354 001C 08A5 		movf	LED_Blinks,F	;nBlinks, 0xFF=system blink, 0=Off
+00295 F005      M		endc
+00296 F005      M	;
+00297 F005 0000 M	#Define	nvFirstParamByte	nvPosition1Lo
+00298 F005 0004 M	#Define	nvLastParamByte	nvSysFlags
+00299 F005      M	;
+00300 F005      M	;
+00301 F005      M	;==============================================================================================
+00302 F005      M	;============================================================================================
+00303 F005      M	;
+00304 F005      M	;
+00305 F005      M		ORG	0x000	; processor reset vector
+00306 0000 0183      M		CLRF	STATUS
+00307 0001 018A      M		CLRF	PCLATH
+00308 0002 285F      M	  	goto	start	; go to beginning of program
+00309 0003      M	;
+00310 0003      M	;===============================================================================================
+00311 0003      M	; Interupt Service Routine
+00312 0003      M	;
+00313 0003      M	; we loop through the interupt service routing every 0.01 seconds
+00314 0003      M	;
+00315 0003      M	;
+00316 0003      M		ORG	0x004	; interrupt vector location
+00317 0004 0020      M		movlb	0	; bank0
+00318 0005      M	;
+00319 0005 1C91      M		btfss	PIR1,TMR2IF
+00320 0006 282F      M		goto	IRQ_2
+00321 0007 1091      M		bcf	PIR1,TMR2IF	; reset interupt flag bit
+00322 0008      M	;
+00323 0008      M	;Decrement timers until they are zero
+00324 0008      M	;
+00325 0008 0185      M		CLRF	FSR0H
+00326 0009 224B      M		call	DecTimer1	;if timer 1 is not zero decrement
+00327 000A 2249      M		call	DecTimer2
+00328 000B 2247      M		call	DecTimer3
+00329 000C 2245      M		call	DecTimer4
+00330 000D      M	;
+00331 000D      M	;-----------------------------------------------------------------
+00332 000D      M	; blink LEDs
+00333 000D 0021      M		movlb                  1                      ;bank 1
+00334 000E 160C      M		BSF	SysLEDTrisBit	;LED off
+00335 000F 150C      M		BSF	LED2TrisBit	;LED2 off
+00336 0010      M	;
+00337 0010 0020      M		movlb	0	;bank 0
+00338 0011 1072      M		BCF	IncBtnFlag
+00339 0012 1D0C      M		BTFSS	IncBtnBit
+00340 0013 1472      M		BSF	IncBtnFlag
+00341 0014      M	;
+00342 0014 10F2      M		BCF	DecBtnFlag
+00343 0015 1E0C      M		BTFSS	DecBtnBit
+00344 0016 14F2      M		BSF	DecBtnFlag
+00345 0017      M	;
+00346 0017 1772      M		bsf	NewSWData	;New data every 0.01s
+00347 0018      M	;
+00348 0018 0BA3      M	SystemBlink_1	DECFSZ	LED_Ticks,F	;Time to blink?
+00349 0019 320B      M		bra	SystemBlink_end	; no
+00350 001A      M	;
+00351 001A 0821      M		MOVF	LED_Time,W
+00352 001B 00A3      M		movwf	LED_Ticks
+00353 001C      M	;
+00354 001C 08A5      M		movf	LED_Blinks,F	;nBlinks, 0xFF=system blink, 0=Off
 00355 001D 		SKPNZ
 00355 001D 1903      M		BTFSC	STATUS,Z		BTFSC	STATUS,Z
 00356 001E 3206 		BRA	SystemBlink_end
@@ -1420,25 +1420,23 @@ RocketServo.asm                                                       Page: 1
 01188 028E 		END
 
 X-Ref Table
-ActivationTime	012C 	HomeServo, ML_Btns_End
 ADCON0	009D 	ReadAN0, ReadAN0_L1, ReadAN0_ColdStart
 ADCON1	009E 	ReadAN0_ColdStart
 ADGO	0001 	ReadAN0_L1
 ADON	0000 	ReadAN0
 ADRESH	009C 	ReadAN0_L1
+ADRESL	009B 	ReadAN0_L1
 RocketServo.asm   X-Ref Table                                            Page: 15
 /Users/davidflynn/Projects/Rocket-Servo/Firmware Rev C/
 
-ADRESL	009B 	ReadAN0_L1
 ANSELA	018C 	start
 APFCON	011D 	start
+ActivationTime	012C 	HomeServo, ML_Btns_End
+BVBad ^	00A4 	start
 BattV_OK	SysFlags,3	start, Start_L1
 BlinkError ^	00BA 	Start_L1
 BtnChangeRate	0002 	ML_Btns_Inc, ML_Btns_Dec
-BVBad ^	00A4 	start
 C	0000 	start, ClampInt, ClampInt_1, Param7D_LE_Param79
-CalcdDwell	0075 	IRQ_Servo1_1
-CalcdDwellH	0076 	IRQ_Servo1_1
 CCP1CON	0293 	IRQ_2, IRQ_Servo1_1, IRQ_Servo1_OL, start, SS_Start_Loop
 CCP1CON_Clr	0009 	IRQ_Servo1_1
 CCP1CON_Int	000A 	IRQ_Servo1_1, IRQ_Servo1_OL
@@ -1450,6 +1448,8 @@ CCP1SEL	0000 	start
 CCPR1H	0292 	IRQ_Servo1_1, IRQ_Servo1_OL, SS_Start_Loop
 CCPR1L	0291 	IRQ_Servo1_1, IRQ_Servo1_OL, SS_Start_Loop
 CFGS	0006 	EERead, EEWrite
+CalcdDwell	0075 	IRQ_Servo1_1
+CalcdDwellH	0076 	IRQ_Servo1_1
 ClampInt ^	01E6 	ML_Btns_Inc, ML_Btns_Dec
 ClampInt_1 ^	01F3 	ClampInt
 ClampInt_tooHigh ^	0202 	ClampInt
@@ -1482,19 +1482,19 @@ DecTimer1 ^	024B
 DecTimer2 ^	0249 	
 DecTimer3 ^	0247 	
 DecTimer4 ^	0245 	
-Delay_1S ^	00CD 	Start_L1
-Delay_L1 ^	00CF 	Delay_L1
 DelayWuS ^	0269 	DecTimer
 DelayWuS_Loop ^	026A 	DelayWuS_Loop
+Delay_1S ^	00CD 	Start_L1
+Delay_L1 ^	00CF 	Delay_L1
 Dest	0030 	MainLoop, Set_Dest_End, Move_It_NIP, Move_It_Dest, CopyPos1ToDest, CopyPos2ToDest
 		SS_Start_Loop, SetDestAsCur
+EEADRL	0191 	EERead, EEWrite
 EEAddrTemp	0026 	CopyToRam, CopyToRam_L1, SaveParams, SaveParams_L1, DelayWuS_Loop
 		EERead, EEWrite
-EEADRL	0191 	EERead, EEWrite
 EECON1	0195 	EERead, EEWrite, EEWriteLoop
 EECON2	0196 	EEWrite
-EEDataTemp	0027 	SaveParams_L1, EEWrite
 EEDATL	0193 	EERead, EEWrite
+EEDataTemp	0027 	SaveParams_L1, EEWrite
 EEPGD	0007 	EERead, EEWrite
 EERead ^	026E 	CopyToRam_L1
 EEWrite ^	0278 	SaveParams_L1
@@ -1503,83 +1503,79 @@ F	0001 	, SystemBlink_Blinking, SystemBlink_end, IRQ_Servo1_1, IRQ_Servo1_OL, st
 		BVBad, ML_Btns_Inc, ML_Btns_Dec, Rev_Debounce, ML_CmdNormal, Norm_Debounce, Set_Dest_End
 		Move_It_NIP, Move_It_Neg, SS_Start_Loop, ClearRam_L2, CopyToRam_L1, SaveParams_L1
 		DecTimer, DelayWuS_Loop
+FSR0	0004 	ClearRam, ClearRam_L2, CopyToRam, CopyToRam_L1, SaveParams, SaveParams_L1
+FSR0H	0005 	, ClearRam, CopyToRam, SaveParams, DecTimer
+FSR0L	0004 	DecTimer
 FirstRAMParam	Position1	CopyToRam, SaveParams
 Flags	0072 	, SystemBlink_end, IRQ_2, start, HomeServo, MainLoop, ML_Btns_Inc, ML_Btns_Dec
 		ML_Btns_Save, ML_Btns_End, ML_CmdNormal, CopyTempToPos, CopyPosToTemp, CopyPosToDest
 		StartServo, SS_Start_Loop
-FSR0	0004 	ClearRam, ClearRam_L2, CopyToRam, CopyToRam_L1, SaveParams, SaveParams_L1
-FSR0H	0005 	, ClearRam, CopyToRam, SaveParams, DecTimer
-FSR0L	0004 	DecTimer
 GIE	0007 	start, Copy7CToSig_1, EEWrite
 GO	0001 	ReadAN0_ColdStart
 HasBattV	0001 	start
 HoldOpen	0000 	ML_CmdNormal
 HomeServo ^	00D4 	Start_Err
-IncBtnBit	PORTA,2	
-IncBtnFlag	Flags,0	, MainLoop
 INDF0	0000 	ClearRam_L2, CopyToRam_L1, SaveParams_L1, DecTimer
-InPosition	SysFlags,2	IRQ_Servo1_1, IRQ_Servo1_OL, Set_Dest_End, Move_It_NIP, SS_Start_Loop
-InPosShutdown	SysFlags,1	IRQ_Servo1_1, IRQ_Servo1_OL
 INTCON	000B 	start, Copy7CToSig_1, EEWrite
 IRQ_2 ^	002F 	
 IRQ_Servo1_1 ^	0038 	IRQ_2
 IRQ_Servo1_End ^	005E 	IRQ_2
 IRQ_Servo1_OL ^	0050 	IRQ_Servo1_1
 IRQ_Servo1_X ^	005C 	IRQ_2, IRQ_Servo1_1
-kDefaultPosition1	0E10 	EEWriteLoop
-kDefaultPosition2	0898 	EEWriteLoop
+InPosShutdown	SysFlags,1	IRQ_Servo1_1, IRQ_Servo1_OL
+InPosition	SysFlags,2	IRQ_Servo1_1, IRQ_Servo1_OL, Set_Dest_End, Move_It_NIP, SS_Start_Loop
+IncBtnBit	PORTA,2	
+IncBtnFlag	Flags,0	, MainLoop
+LATA	010C 	start, Start_L1
+LED2Flag	Flags,2	SystemBlink_end, HomeServo, ML_Btns_End, ML_CmdNormal, SS_Start_Loop
 RocketServo.asm   X-Ref Table                                            Page: 16
 /Users/davidflynn/Projects/Rocket-Servo/Firmware Rev C/
 
-kInPosShutdown	0002 	EEWriteLoop
-kMaxPulseWidth	1068 	ClampInt, ClampInt_tooHigh
-kMidPulseWidth	0BB8 	MainLoop, SS_Start_Loop
-kMinPulseWidth	0708 	ClampInt_1, ClampInt_tooLow
-kServoDwellTime	7D00 	IRQ_Servo1_1, IRQ_Servo1_OL
-LastRAMParam	SysFlags	CopyToRam_L1, SaveParams_L1
-LATA	010C 	start, Start_L1
+LED2TrisBit	TRISA,2	, SystemBlink_end
+LED2_End ^	002E 	SystemBlink_end
+LED2_Ticks	0024 	SystemBlink_end
+LED2_Time	0022 	SystemBlink_end, start
+LEDErrorTime	000A 	BlinkError
+LEDTIME	0064 	start, Start_1
 LED_Blinks	0025 	, SystemBlink_Blinking, BVBad, Start_L1, BlinkError, Start_1, LongFlash
 		LongFlash_L1
 LED_Ticks	0023 	
 LED_Time	0021 	, start, BVBad, BlinkError, Start_1, LongFlash
-LED2_End ^	002E 	SystemBlink_end
-LED2_Ticks	0024 	SystemBlink_end
-LED2_Time	0022 	SystemBlink_end, start
-LED2Flag	Flags,2	SystemBlink_end, HomeServo, ML_Btns_End, ML_CmdNormal, SS_Start_Loop
-LED2TrisBit	TRISA,2	, SystemBlink_end
-LEDErrorTime	000A 	BlinkError
-LEDTIME	0064 	start, Start_1
+LastRAMParam	SysFlags	CopyToRam_L1, SaveParams_L1
 LongFlash ^	00C6 	start, Start_L1
 LongFlash_L1 ^	00CA 	LongFlash_L1
-MainLoop ^	00DC 	Start_Err, Move_End
-MinBattVolts	0041 	start
 ML_Btns_Dec ^	00F7 	MainLoop
 ML_Btns_End ^	0107 	MainLoop, ML_Btns_Inc, ML_Btns_Dec
 ML_Btns_Inc ^	00EC 	MainLoop
 ML_Btns_Save ^	0104 	ML_Btns_Dec
 ML_CmdNormal ^	011A 	ML_Btns_End
+MainLoop ^	00DC 	Start_Err, Move_End
+MinBattVolts	0041 	start
 Move_End ^	0166 	Set_Dest_End
 Move_It ^	0127 	ML_Btns_End, ML_CmdNormal
 Move_It_Dest ^	015D 	Move_It_NIP, Move_It_Neg
+Move_It_NIP ^	0139 	Set_Dest_End
 Move_It_Neg ^	0155 	Move_It_NIP
 Move_It_New ^	0150 	Move_It_Neg
-Move_It_NIP ^	0139 	Set_Dest_End
 Move_It_Now ^	0161 	Set_Dest_End, Move_It_New
-NewSWData	Flags,6	, ML_Btns_End
-Norm_Debounce ^	0125 	ML_CmdNormal
 NOT_DONE	0001 	ReadAN0_L1
 NOT_WPUEN	0007 	start
-nvFirstParamByte	nvPosition1Lo	EEWriteLoop, CopyToRam, SaveParams
-nvLastParamByte	nvSysFlags	EEWriteLoop
-nvPosition1Hi	0001 	EEWriteLoop
-nvPosition1Lo	0000 	EEWriteLoop, CopyToRam, SaveParams
-nvPosition2Hi	0003 	EEWriteLoop
-nvPosition2Lo	0002 	EEWriteLoop
-nvSysFlags	0004 	EEWriteLoop
-oldCode	0000 	ClearRam
+NewSWData	Flags,6	, ML_Btns_End
+Norm_Debounce ^	0125 	ML_CmdNormal
 OPTION_REG	0095 	start
 OSCCON	0099 	start
 OSCCON_Value	0072 	start
+PCLATH	000A 	
+PEIE	0006 	start
+PIE1	0091 	start
+PIR1	0011 	, IRQ_2, IRQ_Servo1_X
+PORTA	000C 	, start, ML_Btns_End
+PR2	001B 	start
+PR2_Value	007D 	start
+PS0	0000 	start
+PS1	0001 	start
+PS2	0002 	start
+PSA	0003 	start
 Param77	0077 	Move_It_NIP, Move_It_Neg, Param7D_LE_Param79, SetTrue, DelayWuS, DelayWuS_Loop
 Param78	0078 	Set_Dest_End, Move_It_NIP, Param7D_LE_Param79
 Param79	0079 	Move_It_NIP, Param7D_LE_Param79
@@ -1593,51 +1589,36 @@ Param7D	007D 	start, BVBad, ML_Btns_Inc, ML_Btns_Dec, Move_It_NIP, Move_It_New, 
 		ClampInt_tooLow, ClampInt_tooHigh, Param7D_LE_Param79
 Param7D_LE_Param79 ^	0207 	Move_It_NIP, Move_It_Neg
 Param7F	007F 	ClearRam, ClearRam_L2
-PCLATH	000A 	
-PEIE	0006 	start
-PIE1	0091 	start
-PIR1	0011 	, IRQ_2, IRQ_Servo1_X
-PORTA	000C 	, start, ML_Btns_End
 PortADDRBits	00DD 	start
 PortAValue	0002 	start
 Position1	0034 	CopyPos1ToDest, CopyPos1ToTemp, CopyTempToPos1, CopyToRam, SaveParams
 Position2	0036 	CopyPos2ToDest, CopyPos2ToTemp, CopyTempToPos2
-PR2	001B 	start
-PR2_Value	007D 	start
-PS0	0000 	start
-PS1	0001 	start
-PS2	0002 	start
-PSA	0003 	start
 PulseSent	SysFlags,0	IRQ_2, Set_Dest_End
 RD	0000 	EERead
 ReadAN0 ^	019F 	start
 ReadAN0_ColdStart ^	01AD 	start, ReadAN0
 ReadAN0_L1 ^	01A4 	ReadAN0_L1
 Rev_Debounce ^	0118 	ML_Btns_End
+SMRevFlag	Flags,5	HomeServo, ML_Btns_End, ML_CmdNormal, CopyTempToPos, CopyPosToTemp
+		CopyPosToDest, SS_Start_Loop
+SS_Start_Loop ^	01B9 	SS_Start_Loop
+STATUS	0003 	, start, Start_L1, LongFlash_L1, Delay_L1, MainLoop, ML_Btns_End, ML_CmdNormal
+		Set_Dest_End, Copy7CToSig, SS_Start_Loop, ClampInt, ClampInt_1, Param7D_LE_Param79
+		CopyToRam_L1, SaveParams_L1, DecTimer
 SaveParams ^	0235 	ML_Btns_Save
 SaveParams_L1 ^	023B 	SaveParams_L1
 ServoMoveTime	012C 	Move_It_NIP, SS_Start_Loop
 ServoOff	Flags,4	IRQ_2, start, StartServo
-Set_Dest_End ^	0128 	MainLoop, ML_Btns_End, Rev_Debounce, Norm_Debounce
 SetDestAsCur ^	01DF 	SS_Start_Loop
 SetTrue ^	0214 	Param7D_LE_Param79
+Set_Dest_End ^	0128 	MainLoop, ML_Btns_End, Rev_Debounce, Norm_Debounce
 SigOutTime	0070 	IRQ_Servo1_1, Copy7CToSig, Copy7CToSig_1
 SigOutTimeH	0071 	Copy7CToSig, Copy7CToSig_1
 SlewChangeRate	0040 	Move_It_NIP, Move_It_Neg
-SMRevFlag	Flags,5	HomeServo, ML_Btns_End, ML_CmdNormal, CopyTempToPos, CopyPosToTemp
-		CopyPosToDest, SS_Start_Loop
-SS_Start_Loop ^	01B9 	SS_Start_Loop
-start ^	005F 	
+StartServo ^	01B5 	Start_Err
 Start_1 ^	00BF 	Start_L1
 Start_Err ^	00C3 	BlinkError
-RocketServo.asm   X-Ref Table                                            Page: 17
-/Users/davidflynn/Projects/Rocket-Servo/Firmware Rev C/
-
 Start_L1 ^	00AE 	Start_L1
-StartServo ^	01B5 	Start_Err
-STATUS	0003 	, start, Start_L1, LongFlash_L1, Delay_L1, MainLoop, ML_Btns_End, ML_CmdNormal
-		Set_Dest_End, Copy7CToSig, SS_Start_Loop, ClampInt, ClampInt_1, Param7D_LE_Param79
-		CopyToRam_L1, SaveParams_L1, DecTimer
 SysFlags	0038 	IRQ_2, IRQ_Servo1_1, IRQ_Servo1_OL, start, Start_L1, Set_Dest_End
 		Move_It_NIP, SS_Start_Loop, CopyToRam_L1, SaveParams_L1
 SysLEDTrisBit	TRISA,4	, SystemBlink_on
@@ -1649,6 +1630,16 @@ T1CON_Val	0001 	start
 T1GCON	0019 	start
 T2CON	001C 	start
 T2CON_Value	004E 	start
+RocketServo.asm   X-Ref Table                                            Page: 17
+/Users/davidflynn/Projects/Rocket-Servo/Firmware Rev C/
+
+TMR0CS	0005 	start
+TMR1GE	0007 	start
+TMR1H	0017 	SS_Start_Loop
+TMR1L	0016 	SS_Start_Loop
+TMR2IE	0001 	start
+TMR2IF	0001 	
+TRISA	008C 	, SystemBlink_on, SystemBlink_end, start
 Timer1Hi	0029 	DecTimer1, DecTimer
 Timer1Lo	0028 	Delay_1S, Delay_L1, DecTimer
 Timer2Hi	002B 	Set_Dest_End, Move_It_NIP, SS_Start_Loop, DecTimer2, DecTimer
@@ -1657,14 +1648,6 @@ Timer3Hi	002D 	HomeServo, ML_Btns_End, ML_CmdNormal, DecTimer3, DecTimer
 Timer3Lo	002C 	HomeServo, ML_Btns_End, ML_CmdNormal, DecTimer
 Timer4Hi	002F 	MainLoop, SS_Start_Loop, DecTimer4, DecTimer
 Timer4Lo	002E 	start, MainLoop, ML_Btns_Inc, ML_Btns_Dec, SS_Start_Loop, DecTimer
-TMR0CS	0005 	start
-TMR1GE	0007 	start
-TMR1H	0017 	SS_Start_Loop
-TMR1L	0016 	SS_Start_Loop
-TMR2IE	0001 	start
-TMR2IF	0001 	
-TRISA	008C 	, SystemBlink_on, SystemBlink_end, start
-useRS232	0000 	EEWriteLoop
 W	0000 	, SystemBlink_end, IRQ_Servo1_1, start, BVBad, Start_L1, LongFlash_L1, Delay_L1
 		MainLoop, ML_Btns_End, ML_CmdNormal, Set_Dest_End, Move_It_NIP, Move_It_New, Move_It_Dest
 		Move_It_Now, Copy7CToSig, Copy7CToSig_1, CopyPos1ToDest, CopyPos2ToDest, CopyPos1ToTemp
@@ -1676,6 +1659,23 @@ WREN	0002 	EEWrite
 Z	0002 	, start, Start_L1, LongFlash_L1, Delay_L1, MainLoop, ML_Btns_End, ML_CmdNormal
 		Set_Dest_End, Copy7CToSig, SS_Start_Loop, ClampInt, ClampInt_1, Param7D_LE_Param79
 		CopyToRam_L1, SaveParams_L1, DecTimer
+kDefaultPosition1	0E10 	EEWriteLoop
+kDefaultPosition2	0898 	EEWriteLoop
+kInPosShutdown	0002 	EEWriteLoop
+kMaxPulseWidth	1068 	ClampInt, ClampInt_tooHigh
+kMidPulseWidth	0BB8 	MainLoop, SS_Start_Loop
+kMinPulseWidth	0708 	ClampInt_1, ClampInt_tooLow
+kServoDwellTime	7D00 	IRQ_Servo1_1, IRQ_Servo1_OL
+nvFirstParamByte	nvPosition1Lo	EEWriteLoop, CopyToRam, SaveParams
+nvLastParamByte	nvSysFlags	EEWriteLoop
+nvPosition1Hi	0001 	EEWriteLoop
+nvPosition1Lo	0000 	EEWriteLoop, CopyToRam, SaveParams
+nvPosition2Hi	0003 	EEWriteLoop
+nvPosition2Lo	0002 	EEWriteLoop
+nvSysFlags	0004 	EEWriteLoop
+oldCode	0000 	ClearRam
+start ^	005F 	
+useRS232	0000 	EEWriteLoop
  
 
 X-Ref Table (The UnCalled)
@@ -1686,9 +1686,9 @@ EEReadW !	026D
 EEWriteW !	0277 	
 IRQ_Servo1 !	002F 	
 ReadAN0_Rtn !	01B3 	
-SetMiddlePosition !	01D6 	
 SS_CmdNormal !	01BC 	
 SS_Move_It !	01BF 	
+SetMiddlePosition !	01D6 	
 SystemBlink_1 !	0018 	
 TestT1_Zero !	0261 	
 TestT2_Zero !	025E 	
