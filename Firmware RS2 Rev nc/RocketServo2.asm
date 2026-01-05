@@ -633,13 +633,17 @@ start	MOVLB	0x01	; select bank 1
 ;
 	MOVLB	0x03	; bank 3
 ;
+	movlw	0x00
+;
 	if HasBattV
-	MOVLW	0x01
-	else
-	MOVLW	0x00
+	iorlw	0x01	;AN0
+	endif
+;	
+	if HasServoCurrent
+	iorlw	0x02	;AN1
 	endif
 ;
-	MOVWF	ANSELA	;AN0 only
+	MOVWF	ANSELA	
 ;
 ; setup timer 1 for 0.5uS/count
 ;
@@ -1440,32 +1444,80 @@ S2CopyPos2ToDest	movlb	0	;Bank0
 ;
 ;=========================================================================================
 ;=========================================================================================
-; Setup or Read AN0
+; Read AN0, Must call ReadAN0_ColdStart first
 ; Exit: 10bit analog in 7D:7C
+;
+ADCON1Value	equ	b'10100000'	;Right Just, Fosc/32, Vss, Vdd
+ADCON1_AN0	equ	b'00000001'	;AN0, ADC Enabled
+ADCON1_AN0	equ	b'00000101'	;AN1, ADC Enabled
 ;
 ReadAN0	CLRF	Param7C
 	CLRF	Param7D
 	MOVLB	1	;bank 1
 	BTFSS	ADCON0,ADON	;Is the Analog input ON?
-	GOTO	ReadAN0_ColdStart	; No, go start it
+	call	ReadAN0_ColdStart	; No, go start it
+;
 ReadAN0_L1	BTFSC	ADCON0,GO_NOT_DONE	;Conversion done?
 	BRA	ReadAN0_L1	; No
+;
 	MOVF	ADRESH,W
 	MOVWF	Param7D
 	MOVF	ADRESL,W
 	MOVWF	Param7C
+;
 	BSF	ADCON0,ADGO	;Start next conversion.
 	MOVLB	0	;bank 0
 	RETURN
 ;
-ReadAN0_ColdStart	MOVLB	1	;bank 1
-	MOVLW	0xA0	;Right Just fosc/32
+;------------------------
+; Read AN1, Must call ReadAN1_ColdStart first
+; Exit: 10bit analog in 7D:7C
+;
+ReadAN1	CLRF	Param7C
+	CLRF	Param7D
+	MOVLB	1	;bank 1
+	BTFSS	ADCON0,ADON	;Is the Analog input ON?
+	call	ReadAN1_ColdStart	; No, go start it
+;
+ReadAN1_L1	BTFSC	ADCON0,GO_NOT_DONE	;Conversion done?
+	BRA	ReadAN1_L1	; No
+;
+	MOVF	ADRESH,W
+	MOVWF	Param7D
+	MOVF	ADRESL,W
+	MOVWF	Param7C
+;
+	BSF	ADCON0,ADGO	;Start next conversion.
+	MOVLB	0	;bank 0
+	RETURN
+;
+;------------------------
+;
+ReadAN0_ColdStart	MOVLB	ADCON1	;bank 1
+	MOVLW	ADCON1Value
 	MOVWF	ADCON1
-	MOVLW	b'00000001'	;Select AN0
+	MOVLW	ADCON1_AN0	;Select AN0
 	MOVWF	ADCON0
+ReadAN0_ColdStart_1	nop		;4uS delay
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
 	BSF	ADCON0,ADGO
 ReadAN0_Rtn	MOVLB	0	;bank 0
 	Return
+;
+;-------------------------
+;
+ReadAN1_ColdStart	MOVLB	ADCON1	;bank 1
+	MOVLW	ADCON1Value
+	MOVWF	ADCON1
+	MOVLW	ADCON1_AN1	;Select AN0
+	MOVWF	ADCON0
+	bra	ReadAN0_ColdStart_1
 ;
 ;=========================================================================================
 ;=========================================================================================
