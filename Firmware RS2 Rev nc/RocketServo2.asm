@@ -361,7 +361,9 @@ Servo2ActiveTimerHi	EQU	Timer6Hi
 ServoMoveTime	EQU	.300	;time servo is powered when CMD changes
 ;
 BtnChangeRate	EQU	0x02	;change by 1uS per 0.05 seconds
-SlewChangeRate	EQU	0x40	;change by 8uS per 0.01 seconds
+;SlewChangeRate	EQU	0x20	;change by 16uS per 0.01 seconds, Slow
+SlewChangeRate	EQU	0x40	;change by 32uS per 0.01 seconds, good
+;SlewChangeRate	EQU	0x60	;change by 48uS per 0.01 seconds, Fast
 ;
 ;=======================================================================================================
 ;  Common Ram 70-7F same for all banks
@@ -999,10 +1001,6 @@ TryState3	movlw	3
 	btfss	BattV_OK	;Batt volts OK?
 	bra	State3_BlinkError	; No
 ; Battery voltage is OK
-	movlb	2	;bank 2
-	bcf	ContEnable1	;Enable continuity
-	bcf	ContEnable2	;Enable continuity
-	movlb	0	;bank 0
 ;
 	movlw	1
 	movwf	State2	;Start servo current test
@@ -1106,7 +1104,23 @@ TryState7	movlw	7
 ; Last State=LastState+1 so we're done
 TryState8:
 LastState	clrf	State
-	return
+;
+	btfss	BattV_OK	;Batt volts OK?
+	bra	State_8LowVolts	; No
+;
+	btfss	S1Found
+	bra	State_8NoS1
+	movlb	2	;bank 2
+	bcf	ContEnable1	;Enable continuity
+	movlb	0	;bank 0
+;
+State_8NoS1	btfss	S2Found
+	bra	State_8NoS2
+	movlb	2	;bank 2
+	bcf	ContEnable2	;Enable continuity
+	movlb	0	;bank 0
+State_8NoS2:
+State_8LowVolts	return
 ;
 DoNextState	incf	State,F	
 	return
@@ -1130,10 +1144,17 @@ HandleState2	movlw	1
 ; Move Servo1 to Position1+100
 	movlw	SmallServoMove
 	addwf	S1Position1,W
-	movwf	S1Dest
+	movwf	Param7C
 	clrw
 	addwfc	S1Position1+1,W
+	movwf	Param7D
+;
+ClampAndGoS1	call	ClampInt
+	movf	Param7C,W
+	movwf	S1Dest
+	movf	Param7D,W
 	movwf	S1Dest+1
+;
 	bcf	S1InPosition
 	bcf	S1CurPosIsDest
 ;
@@ -1155,14 +1176,12 @@ HandleState2_2	movlw	2
 ; Move Servo1 to Position1-100
 	movlw	SmallServoMove
 	subwf	S1Position1,W
-	movwf	S1Dest
+	movwf	Param7C
 	clrw
 	subwfb	S1Position1+1,W
-	movwf	S1Dest+1
-	bcf	S1InPosition
-	bcf	S1CurPosIsDest
-;
-	bra	DoNextState2
+	movwf	Param7D
+;	
+	bra	ClampAndGoS1
 ;------------------------------
 HandleState2_3	movlw	3
 	subwf	State2,W
@@ -1188,7 +1207,7 @@ HandleState2_3	movlw	3
 HandleState2_4	movlw	4
 	subwf	State2,W
 	SKPZ		;State2=4?
-	bra	HandleState2_5
+	bra	HandleState2_5	; No
 ;
 	call	GetPeakCurrect
 ;
@@ -1211,13 +1230,107 @@ HandleState2_4	movlw	4
 HandleState2_4_1	movlb	0	;bank 0
 	bsf	S1Found	;Servo is attached
 	bra	DoNextState2
+;----------------------------
+HandleState2_5	movlw	5
+	subwf	State2,W
+	SKPZ		;State2=5?
+	bra	HandleState2_6	; No
+;
+	call	ClearPeakCurrent
+; Move Servo2 to Position1+100
+	movlw	SmallServoMove
+	addwf	S2Position1,W
+	movwf	Param7C
+	clrw
+	addwfc	S2Position1+1,W
+	movwf	Param7D
+;
+ClampAndGoS2	call	ClampInt
+	movf	Param7C,W
+	movwf	S2Dest
+	movf	Param7D,W
+	movwf	S2Dest+1
+;
+	bcf	S2InPosition
+	bcf	S2CurPosIsDest
+;
+DoNextState2S2	incf	State2,F
+	return
+;
+;----------------------------
+HandleState2_6	movlw	6
+	subwf	State2,W
+	SKPZ		;State2=6?
+	bra	HandleState2_7	; No
+;
+	call	GetPeakCurrect
+;
+; wait for servo to finish moving
+	btfss	S2CurPosIsDest	;Move done?
+	return		; No
+;
+; Move Servo1 to Position1-100
+	movlw	SmallServoMove
+	subwf	S2Position1,W
+	movwf	Param7C
+	clrw
+	subwfb	S2Position1+1,W
+	movwf	Param7D
+;	
+	bra	ClampAndGoS2
+;----------------------------
+HandleState2_7	movlw	7
+	subwf	State2,W
+	SKPZ		;State2=7?
+	bra	HandleState2_8	; No
+;
+	call	GetPeakCurrect
+;
+; wait for servo to finish moving
+	btfss	S2CurPosIsDest	;Move done?
+	return		; No
+;
+; Move Servo1 to Position1
+	movf	S2Position1,W
+	movwf	S2Dest
+	movf	S2Position1+1,W
+	movwf	S2Dest+1
+	bcf	S2InPosition
+	bcf	S2CurPosIsDest
+;
+	bra	DoNextState2S2
+;----------------------------
+HandleState2_8	movlw	8
+	subwf	State2,W
+	SKPZ		;State2=8?
+	bra	HandleState2_9	; No
+;
+	call	GetPeakCurrect
+;
+; wait for servo to finish moving
+	btfss	S2InPosition	;Move done and servo off?
+	return		; No
+;
+; Is peak current > minimum (10)?
+	movlb	1	;bank 1
+	movf	PeakCurrent+1,W
+	SKPZ		;Current>255?
+	bra	HandleState2_8_1
+	movlw	MinPeakCurrent
+	subwf	PeakCurrent,W
+	SKPB		;Current<MinPeakCurrent?
+	bra	HandleState2_8_1	; No, Current>=MinPeakCurrent
+	movlb	0	;bank 0, Yes, no servo found
+	bra	DoNextState2S2
+;
+HandleState2_8_1	movlb	0	;bank 0
+	bsf	S2Found	;Servo is attached
+	bra	DoNextState2S2
+;
 ;---------------------------
-HandleState2_5
-;
-	
-;	bsf	S2Found
+HandleState2_9:
+; We're done
 	clrf	State2
-;
 	return
 ;
 ;========================================================================================
