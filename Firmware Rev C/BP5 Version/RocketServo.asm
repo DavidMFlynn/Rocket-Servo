@@ -122,8 +122,8 @@ kMinPulseWidth	EQU	d'1000'	;500uS
 kMidPulseWidth	EQU	d'3000'	;1500uS
 kMaxPulseWidth	EQU	d'5000'	;2500uS
 	if BP3Hold
-kDefaultPosition2	EQU	d'1000'	;500uS Locked
-kDefaultPosition1	EQU	d'5000'	;2500uS Open
+kDefaultPosition2	EQU	d'1000'	;500uS Open
+kDefaultPosition1	EQU	d'5000'	;2500uS Locked
 HoldOpen	EQU	1
 	else
 kDefaultPosition1	EQU	d'3600'	;1800

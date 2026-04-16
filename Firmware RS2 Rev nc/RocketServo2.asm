@@ -17,7 +17,7 @@
 ; Options
 HasEnable	EQU	1
 HasBattV	EQU	1	;Set to 0 or 1
-HasServoCurrent	EQU	1
+HasServoCurrent	EQU	0
 BP3Hold	EQU	0	;Hold at reverse value
 ;====================================================================================================
 ; To Do's
@@ -115,7 +115,7 @@ CCPnCON_Clr	EQU	b'00001001'	;Clear output on match
 CCPnCON_Set	EQU	b'00001000'	;Set output on match
 CCPnCON_Int	EQU	b'00001010'
 ;
-MinBattVolts	EQU	d'65'	;V/20 * 204c/v = 6.5V
+MinBattVolts	EQU	d'232'	;V/35.8 * 204.8c/v = 6.5V
 ;
 ActivationTime	EQU	d'300'	;3 seconds
 kOffsetCtrValue	EQU	d'2047'
@@ -125,14 +125,14 @@ kMaxPulseWidth	EQU	d'4200'	;2100uS
 	if BP3Hold
 kDefaultPosition1	EQU	d'2000'	;1000uS Locked
 kDefaultPosition2	EQU	d'4110'	;2055uS Open
-HoldOpen	EQU	1
+HoldOpen	EQU	1	; servo 1 only
 	else
-kDefaultPosition1	EQU	d'3600'	;1800
-kDefaultPosition2	EQU	d'2200'	;1100
+kDefaultPosition1	EQU	d'3600'	;1800uS
+kDefaultPosition2	EQU	d'2200'	;1100uS
 HoldOpen	EQU	0
 	endif
 kServoDwellTime	EQU	d'32000'	;16mS
-kInPosShutdown	EQU	b'00000010'	;b'00000010' enabled 0x00 disabled
+kInPosShutdown	EQU	b'00100010'	;b'00100010' enabled 0x00 disabled
 ;
 ;====================================================================================================
 	nolist
@@ -140,7 +140,7 @@ kInPosShutdown	EQU	b'00000010'	;b'00000010' enabled 0x00 disabled
 	list
 ;
 ;    Port A bits
-PortADDRBits	EQU	b'11100111'
+PortADDRBits	EQU	b'01100111'
 #Define	RA0_In	PORTA,0	;AN0/Battery (volts-0.5)/21
 #Define	RA1_In	PORTA,1	;AN1/Servo_I
 #Define	IncBtnBit	PORTA,2	;SW1 Inc switch Active Low Input 
@@ -154,7 +154,7 @@ PortADDRBits	EQU	b'11100111'
 PortAValue	EQU	b'00000000'
 ;
 ;    Port B bits
-PortBDDRBits	EQU	b'11111111'
+PortBDDRBits	EQU	b'11111110'
 #Define	RB0_In	PORTB,0	;CCP1, Servo1
 #Define	S1CmdInputBit	PORTB,1	;Trigger1 Active Low Input
 #Define	S2CmdInputBit	PORTB,2	;Trigger2 Active Low Input
@@ -178,6 +178,7 @@ All_Out	EQU	0x00
 ;
 LEDTIME	EQU	d'100'	;1.00 seconds
 LEDErrorTime	EQU	d'10'
+LEDFlashTime	EQU	d'20'
 ;
 T1CON_Val	EQU	b'00000001'	;Fosc=8MHz, PreScale=1,Fosc/4,Timer ON
 ;T1CON_Val	EQU	b'00100001'	;Fosc=32MHz, PreScale=4,Fosc/4,Timer ON
@@ -204,14 +205,18 @@ CCP1CON_Value	EQU	0x00	;CCP1 off
 ;
 	ISR_Temp		;scratch mem
 	LED_Time
-	LED2_Time
-	LED3_Time
+	LED2_PeriodTime		;Usually 100=1s, Set to 1 for constant ON
+	LED2_FlashTime		;Set to 1 for constant ON, otherwise LEDFlashTime
+	LED3_PeriodTime
+	LED3_FlashTime		;Set to 1 for constant ON, otherwise LEDFlashTime
 	LED_Ticks		;Timer tick count
 	LED2_Ticks
 	LED3_Ticks
 	LED_Blinks		;nBlinks, 0xFF=system blink, 0=Off
-	LED2_Blinks		;nBlinks, 0xFF=system blink, 0=Off
-	LED3_Blinks		;nBlinks, 0xFF=system blink, 0=Off
+	LED2_Flashes		;nFlashes 0..3, 0=Off
+	LED2_FlashCount
+	LED3_Flashes		;nFlashes 0..3, 0=Off
+	LED3_FlashCount
 ;
 ;
 	EEAddrTemp		;EEProm address to read or write
@@ -231,12 +236,16 @@ CCP1CON_Value	EQU	0x00	;CCP1 off
 	Timer6Lo		;6th 16 bit timer
 	Timer6Hi		; Servo 2 Activation timer
 ;
+	State		;State 0..n, Startup LED sequence and main state
+	State2		;State 0..n, Servo current testing
+;
 	S1Dest:2
 	S1CurPos:2
 	S2Dest:2
 	S2CurPos:2
 ;
 	BtnFlags
+	ServoFlags
 ;
 	S1Position1:2		;Servo1 rest
 	S1Position2:2		;Servo1 Triggered
@@ -262,12 +271,18 @@ Servo2ActiveTimerHi	EQU	Timer6Hi
 ; BtnFlags
 #Define	IncBtnFlag	BtnFlags,0
 #Define	DecBtnFlag	BtnFlags,1
-#Define	S1Active	BtnFlags,2
-#Define	S2Active	BtnFlags,3
+#Define	S1Active	BtnFlags,2	;Last servo activated
+#Define	S2Active	BtnFlags,3	; used for buttons
 #Define	NewSWData	BtnFlags,4
 #Define	LED2Flag	BtnFlags,5
 #Define	LED3Flag	BtnFlags,6
 #Define	DataChangedFlag	BtnFlags,7
+;
+; ServoFlags bits
+#Define	S1Found	ServoFlags,0	;Detected w/ current monitor
+#Define	S2Found	ServoFlags,1
+#Define	S1CurPosIsDest	ServoFlags,2
+#Define	S2CurPosIsDest	ServoFlags,3
 ;
 ; SysFlags
 #Define	S1PulseSent	SysFlags,0
@@ -283,6 +298,37 @@ Servo2ActiveTimerHi	EQU	Timer6Hi
 ;
 ;================================================================================================
 ;  Bank1 Ram 0A0h-0EFh 80 Bytes
+;
+	cblock	0x0A0
+; Raw AN Results
+	AN0_RawL
+	AN0_RawH
+	AN1_RawL
+	AN1_RawH
+; Data for main thread, protected by semaphores
+	AN0_DataL
+	AN0_DataH
+	AN1_DataL
+	AN1_DataH
+;
+	IDleCurrent:2
+	PeakCurrent:2
+;
+	AN_Semaphores
+	AN_NewRawDataFlags
+	AN_NewDataFlags
+;
+	endc
+;
+; AN_Semaphores bits
+#Define	AN0_Semaphore	AN_Semaphores,0	
+#Define	AN1_Semaphore	AN_Semaphores,1
+; AN_NewRawDataFlags bits
+#Define	AN0_NewRawData	AN_NewRawDataFlags,0
+#Define	AN1_NewRawData	AN_NewRawDataFlags,1
+; AN_NewDataFlags bits
+#Define	AN0_NewData	AN_NewDataFlags,0
+#Define	AN1_NewData	AN_NewDataFlags,1
 ;
 ;================================================================================================
 ;  Bank5 Ram 2A0h-2EFh 80 Bytes (CCP1 and CCP2 are in this bank)
@@ -304,12 +350,10 @@ Servo2ActiveTimerHi	EQU	Timer6Hi
 	endc
 ;
 ; S1Flags bits
-#Define	S1LED2Flag	S1Flags,2
 #Define	S1ServoOff	S1Flags,4
 #Define	S1SMRevFlag	S1Flags,5
 ;
 ; S2Flags bits
-#Define	S2LED2Flag	S2Flags,2
 #Define	S2ServoOff	S2Flags,4
 #Define	S2SMRevFlag	S2Flags,5
 ;
@@ -445,64 +489,127 @@ SystemBlink_1	DECFSZ	LED_Ticks,F	;Time to blink?
 	movwf	LED_Ticks
 ;
 	movf	LED_Blinks,F	;nBlinks, 0xFF=system blink, 0=Off
-	SKPNZ
-	BRA	SystemBlink_end
-	incfsz	LED_Blinks,W
-	BRA	SystemBlink_Blinking
-	BRA	SystemBlink_on
+	SKPNZ		;LED_Blinks=0?
+	BRA	SystemBlink_end	; Yes, do nothing
+	incfsz	LED_Blinks,W	;LED_Blinks=0xFF
+	BRA	SystemBlink_Blinking	; No
+	BRA	SystemBlink_on	; Yes
+;
 SystemBlink_Blinking	decf	LED_Blinks,F
+;
 SystemBlink_on	movlb                  1                      ;bank 1
 	BCF	SysLEDTrisBit	;LED on
-SystemBlink_end	MOVLB	0                      ;bank 0
+SystemBlink_end	movlb	0                      ;bank 0
 ;
-	decfsz	LED2_Ticks,F
-	bra	LED2_End
+;--------------
+; Handle LED2
+; Flash LEDn_Flashes (0..3) 
+; For N flashes per period set LEDn_Flashes=N, LEDn_PeriodTime=LEDTIME, LEDn_FlashTime=LEDFlashTime
+; For continious ON set LEDn_PeriodTime=1, LEDn_FlashTime=1, LEDn_Flashes=1
 ;
-	MOVF	LED2_Time,W
+	movf	LED2_Ticks,F
+	SKPNZ		;LED2_Ticks=0?
+	bra	LED2_DoUpdate	; Yes
+	decfsz	LED2_Ticks,F	;Time to flash?
+	bra	IRQ_LED2_End	; No, Leave LED off
+;
+LED2_DoUpdate	movf	LED2_PeriodTime,W	;default time in case LED2_Flashes=0
 	movwf	LED2_Ticks
 ;
-	BTFSS	LED2Flag
-	bra                    LED2_End
-	movlb                  1                      ;bank 1
-	BCF	Servo1LEDTrisBit
+	movf	LED2_Flashes,W
+	SKPNZ		;Any flashes?
+	bra	IRQ_LED2_End	; No, leave LED off
 ;
-LED2_End	MOVLB	0
+; Set time until next flash
+; if LED2_FlashCount>0 then LED2_FlashCount=LED2_FlashCount-1, LED2_Ticks=LED2_FlashTime, LED=ON
+;	else LED2_FlashCount=LED2_Flashes, LED=OFF
 ;
-	decfsz	LED3_Ticks,F
-	bra	LED3_End
+	movf	LED2_FlashCount,F
+	SKPZ		;LED2_FlashCount=0?
+	bra	LED2_ContinueFlashes
 ;
-	MOVF	LED3_Time,W
+	movf	LED2_Flashes,W
+	movwf	LED2_FlashCount
+	bra	IRQ_LED2_End	
+;
+LED2_ContinueFlashes	decf	LED2_FlashCount,F
+	movf	LED2_FlashTime,W
+	movwf	LED2_Ticks
+;
+IRQ_LED2_ON	movlb                  1                      ;bank 1
+	BCF	Servo1LEDTrisBit	;LED ON
+;
+IRQ_LED2_End	movlb	0
+;
+;-------------
+; Handle LED3
+; Flash LEDn_Flashes (0..3) 
+; For N flashes per period set LEDn_Flashes=N, LEDn_PeriodTime=LEDTIME, LEDn_FlashTime=LEDFlashTime
+; For continious ON set LEDn_PeriodTime=1, LEDn_FlashTime=1, LEDn_Flashes=1
+;
+	movf	LED3_Ticks,F
+	SKPNZ		;LED3_Ticks=0?
+	bra	LED3_DoUpdate	; Yes
+	decfsz	LED3_Ticks,F	;Time to flash?
+	bra	IRQ_LED3_End	; No, Leave LED off
+;
+LED3_DoUpdate	movf	LED3_PeriodTime,W	;default time in case LED3_Flashes=0
 	movwf	LED3_Ticks
 ;
-	BTFSS	LED3Flag
-	bra                    LED3_End
-	movlb                  1                      ;bank 1
-	BCF	Servo2LEDTrisBit
+	movf	LED3_Flashes,W
+	SKPNZ		;Any flashes?
+	bra	IRQ_LED3_End	; No, leave LED off
 ;
-LED3_End	MOVLB	0
+; Set time until next flash
+;
+; Set time until next flash
+; if LED3_FlashCount>0 then LED3_FlashCount=LED3_FlashCount-1, LED3_Ticks=LED3_FlashTime, LED=ON
+;	else LED3_FlashCount=LED3_Flashes, LED=OFF
+;
+	movf	LED3_FlashCount,F
+	SKPZ		;LED3_FlashCount=0?
+	bra	LED3_ContinueFlashes
+;
+	movf	LED3_Flashes,W
+	movwf	LED3_FlashCount
+	bra	IRQ_LED3_End	
+;
+LED3_ContinueFlashes	decf	LED3_FlashCount,F
+	movf	LED3_FlashTime,W
+	movwf	LED3_Ticks
+;
+IRQ_LED3_ON	movlb                  1                      ;bank 1
+	BCF	Servo2LEDTrisBit	;LED ON
+;
+IRQ_LED3_End	movlb	0
 
 ;-----------------------------------------------------------------
 ;
 IRQ_2:
+	movlb	0
+	btfsc	PIR1,ADIF
+	goto	IRQ_ADC
+IRQ_ADC_Return:
+;
 ;==================================================================================
 ;
 ; Handle CCP1 Interupt Flag, Enter w/ bank 0 selected
 ;
-IRQ_Servo1	MOVLB	0	;bank 0
+	movlb	0	;bank 0
 	BTFSS	PIR1,CCP1IF
-	GOTO	IRQ_Servo1_End
+	bra	IRQ_Servo1_End
 ;
 	BSF	S1PulseSent
-	MOVLB	0x05                   ;Bank 5
+	movlb	0x05                   ;Bank 5
 	BTFSS	S1ServoOff	;Are we sending a pulse?
-	GOTO	IRQ_Servo1_1	; Yes
+	bra	IRQ_Servo1_1	; Yes
 ;
 ;Oops, how did we get here???
 	CLRF	CCP1CON
-	GOTO	IRQ_Servo1_X
+	bra	IRQ_Servo1_X
 ;
 IRQ_Servo1_1	BTFSC	CCP1CON,CCP1M0	;Set output on match?
-	GOTO	IRQ_Servo1_OL	; No
+	bra	IRQ_Servo1_OL	; No
 ; An output just went high
 ;
 	MOVF	S1SigOutTime,W	;Put the pulse into the CCP reg.
@@ -510,7 +617,7 @@ IRQ_Servo1_1	BTFSC	CCP1CON,CCP1M0	;Set output on match?
 	MOVF	S1SigOutTime+1,W
 	ADDWFC	CCPR1H,F
 	movlb	0	;Bank 0
-	movlw	CCPnCON_Int
+	movlw	CCPnCON_Int	;default to do nothing
 	btfss	S1InPosShutdown
 	MOVLW	CCPnCON_Clr	;Clear output on match
 	btfss	S1InPosition
@@ -526,7 +633,7 @@ IRQ_Servo1_1	BTFSC	CCP1CON,CCP1M0	;Set output on match?
 	SUBWF	S1CalcdDwell,F
 	MOVF	S1SigOutTime+1,W
 	SUBWFB	S1CalcdDwellH,F
-	GOTO	IRQ_Servo1_X
+	bra	IRQ_Servo1_X
 ;
 ; output went low so this cycle is done
 IRQ_Servo1_OL	MOVLW	LOW kServoDwellTime
@@ -535,7 +642,7 @@ IRQ_Servo1_OL	MOVLW	LOW kServoDwellTime
 	ADDWFC	CCPR1H,F
 ;
 	movlb	0	;Bank 0
-	movlw	CCPnCON_Int
+	movlw	CCPnCON_Int	;default to do nothing
 	btfss	S1InPosShutdown
 	MOVLW	CCPnCON_Set	;Set output on match
 	btfss	S1InPosition
@@ -543,29 +650,29 @@ IRQ_Servo1_OL	MOVLW	LOW kServoDwellTime
 	movlb	5	;Bank 5
 	MOVWF	CCP1CON	;Idle output low
 ;
-IRQ_Servo1_X	MOVLB	0x00                   ;Bank 0
+IRQ_Servo1_X	movlb	0x00                   ;Bank 0
 	BCF	PIR1,CCP1IF
 IRQ_Servo1_End:
+;
 ;--------------------------------------------------------------------
-;==================================================================================
 ;
 ; Handle CCP2 Interupt Flag, Enter w/ bank 0 selected
 ;
-IRQ_Servo2	MOVLB	0	;bank 0
+	movlb	0	;bank 0
 	BTFSS	PIR2,CCP2IF
-	GOTO	IRQ_Servo2_End
+	bra	IRQ_Servo2_End
 ;
 	BSF	S2PulseSent
-	MOVLB	0x05                   ;Bank 5
+	movlb	0x05                   ;Bank 5
 	BTFSS	S2ServoOff	;Are we sending a pulse?
-	GOTO	IRQ_Servo2_1	; Yes
+	bra	IRQ_Servo2_1	; Yes
 ;
 ;Oops, how did we get here???
 	CLRF	CCP2CON
-	GOTO	IRQ_Servo2_X
+	bra	IRQ_Servo2_X
 ;
 IRQ_Servo2_1	BTFSC	CCP2CON,CCP2M0	;Set output on match?
-	GOTO	IRQ_Servo2_OL	; No
+	bra	IRQ_Servo2_OL	; No
 ; An output just went high
 ;
 	MOVF	S2SigOutTime,W	;Put the pulse into the CCP reg.
@@ -589,7 +696,7 @@ IRQ_Servo2_1	BTFSC	CCP2CON,CCP2M0	;Set output on match?
 	SUBWF	S2CalcdDwell,F
 	MOVF	S2SigOutTime+1,W
 	SUBWFB	S2CalcdDwellH,F
-	GOTO	IRQ_Servo2_X
+	bra	IRQ_Servo2_X
 ;
 ; output went low so this cycle is done
 IRQ_Servo2_OL	MOVLW	LOW kServoDwellTime
@@ -606,8 +713,8 @@ IRQ_Servo2_OL	MOVLW	LOW kServoDwellTime
 	movlb	5	;Bank 5
 	MOVWF	CCP2CON	;Idle output low
 ;
-IRQ_Servo2_X	MOVLB	0x00                   ;Bank 0
-	BCF	PIR1,CCP2IF
+IRQ_Servo2_X	movlb	0x00                   ;Bank 0
+	BCF	PIR2,CCP2IF
 IRQ_Servo2_End:
 ;--------------------------------------------------------------------
 ;
@@ -618,7 +725,7 @@ IRQ_Servo2_End:
 ;**********************************************************************************************
 ;==============================================================================================
 ;
-start	MOVLB	0x01	; select bank 1
+start	movlb	0x01	; select bank 1
 	bsf	OPTION_REG,NOT_WPUEN	; disable pullups on port B
 	bcf	OPTION_REG,TMR0CS	; TMR0 clock Fosc/4
 	bcf	OPTION_REG,PSA	; prescaler assigned to TMR0
@@ -631,19 +738,12 @@ start	MOVLB	0x01	; select bank 1
 	movlw	b'00010111'	; WDT prescaler 1:65536 period is 2 sec (RESET value)
 	movwf	WDTCON
 ;
-	MOVLB	0x03	; bank 3
+	movlb	0x03	; bank 3
 ;
-	movlw	0x00
-;
-	if HasBattV
-	iorlw	0x01	;AN0
-	endif
-;	
-	if HasServoCurrent
-	iorlw	0x02	;AN1
-	endif
-;
+	movlw	0x03	; AN0,AN1 only
 	MOVWF	ANSELA	
+	movlw	0x00
+	movwf	ANSELB
 ;
 ; setup timer 1 for 0.5uS/count
 ;
@@ -660,11 +760,10 @@ start	MOVLB	0x01	; select bank 1
 	MOVWF	T2CON
 	MOVLW	PR2_Value
 	MOVWF	PR2
-	MOVLB	1	;Bank 1
+	movlb	1	;Bank 1
 	BSF	PIE1,TMR2IE
 ;
 ; setup ccp1
-;
 	movlb	5                      ;Bank 5
 	BSF	S1ServoOff
 	movlb	2                      ;bank 2
@@ -672,11 +771,10 @@ start	MOVLB	0x01	; select bank 1
 	movlb	5                      ;bank 5
 	CLRF	CCP1CON
 ;
-	MOVLB	0x01	;Bank 1
+	movlb	0x01	;Bank 1
 	bsf	PIE1,CCP1IE
 ;
 ; setup ccp2
-;
 	movlb	5                      ;Bank 5
 	BSF	S2ServoOff
 	movlb	2                      ;bank 2
@@ -684,7 +782,7 @@ start	MOVLB	0x01	; select bank 1
 	movlb	5                      ;bank 5
 	CLRF	CCP2CON
 ;
-	MOVLB	0x01	;Bank 1
+	movlb	0x01	;Bank 1
 	bsf	PIE2,CCP2IE
 ;
 ; setup data ports
@@ -695,143 +793,65 @@ start	MOVLB	0x01	; select bank 1
 	MOVLW	PortADDRBits
 	MOVWF	TRISA
 ;
-	MOVLB	0	;bank 0
-	CLRWDT
+	movlb                  0                      ;bank 0
+	MOVLW	PortBValue
+	MOVWF	PORTB	;Init PORTA
+	movlb                  1                      ;bank 1
+	MOVLW	PortBDDRBits
+	MOVWF	TRISB
+	movlb	0	;bank 0
 ;
+;Configure LEDs
 	MOVLW	LEDTIME
 	MOVWF	LED_Time
-	movlw	0x01	;continuos ON
-	movwf	LED2_Time
+	movwf	LED2_PeriodTime
+	movwf	LED3_PeriodTime
+	movlw	LEDFlashTime
+	movwf	LED2_FlashTime
+	movwf	LED3_FlashTime
+	clrf	LED2_Flashes	;LEDs off
+	clrf	LED3_Flashes
 ;
-	CLRWDT
-	CALL	CopyToRam
-	CLRWDT
-;
+	call	CopyToRam
 ;
 	bsf	INTCON,PEIE	; enable periferal interupts
-;	bsf	INTCON,T0IE	; enable TMR0 interupt
 	bsf	INTCON,GIE	; enable interupts
 ;
-	MOVLB	0x00	;bank 0
-	movlw	0x04
-	movwf	Timer4Lo	;power up delay
+	call	Init_ADC
 ;
 ;=========================================================================================
 ;=========================================================================================
-;  Main Loop
+;  Test battery voltage and servo current before Main Loop
 ;
-	if HasBattV
-	CALL	ReadAN0_ColdStart
-	CALL	LongFlash
+	movlw	0x01
+	movwf	State	;Start it
 ;
-	CALL	ReadAN0
-	CALL	ReadAN0
-;
-;	if HasEnable
-	MOVLB	2	;bank 2
+	movlb	2	;bank 2
 	bsf	ContEnable1	;Disable continuity S1
 	bsf	ContEnable2	;Disable continuity S2
-	MOVLB	0	;bank 0
-	bcf	BattV_OK
-	movf	Param7D,F	;error is not zero
-	SKPZ
-	bra	BVBad
-	movlw	MinBattVolts
-	subwf	Param7C,W	;ADC-MinBattVolts
-	SKPNB
-	bra	BVBad
-	bsf	BattV_OK
-BVBad	
-;	endif
-;
-; devide by 8
-	lsrf	Param7D,F
-	rrf	Param7C,F
-	lsrf	Param7D,F
-	rrf	Param7C,F
-	lsrf	Param7D,F
-	rrf	Param7C,F
-;
-	movlw	.50	; 1/2 second
-	movwf	LED_Time
-	movf	Param7C,W
-	movwf	LED_Blinks
-;
-; Wait for blinks to finish
-Start_L1	CLRWDT
-	movf	LED_Blinks,W
-	SKPZ
-	BRA	Start_L1
-;
-	CALL	Delay_1S
-;
-	CALL	LongFlash
-;
-	endif
-;
-	btfss	BattV_OK
-	bra	BlinkError
-	MOVLB	2	;bank 2
-	bcf	ContEnable1	;Enable continuity
-	bcf	ContEnable2	;Enable continuity
-	MOVLB	0	;bank 0
-	bra	Start_1
-;
-BlinkError	movlw	LEDErrorTime
-	MOVWF	LED_Time
-	movlw	0xFF
-	movwf	LED_Blinks
-	bra	Start_Err
-;
-; normal system blinks
-Start_1	MOVLW	LEDTIME
-	MOVWF	LED_Time
-	movlw	0xFF
-	movwf	LED_Blinks
-;
-Start_Err	CALL	S1StartServo
-	CALL	S2StartServo
-	CALL	HomeServo
-	
-	BRA	MainLoop
+	movlb	0	;bank 0
 ;
 ;==============================================
-; One second ON one second OFF
-LongFlash	movlw	.100
-	movwf	LED_Blinks
-	movlw	0x01	;constant ON
-	movwf	LED_Time
-LongFlash_L1	movf	LED_Blinks,W
-	SKPZ
-	BRA	LongFlash_L1
+; Make servos active and move to Position 1
 ;
-Delay_1S	movlw	.100
-	movwf	Timer1Lo
-Delay_L1	movf	Timer1Lo,W
-	SKPZ
-	bra	Delay_L1
-	CLRWDT
-	return
+	movlb	5
+	bsf	S1ServoOff
+	bsf	S2ServoOff
 ;
-;==============================================
-HomeServo	movlb	5	;Bank5
-	bcf	S1SMRevFlag
-	bcf	S2SMRevFlag
-	movlb	0	;Bank0
-	bcf	LED2Flag
-	bcf	LED3Flag
-	movlw	Low ActivationTime
-	movwf	Servo1ActiveTimerLo
-	movwf	Servo2ActiveTimerLo
-	movlw	High ActivationTime
-	movwf	Servo1ActiveTimerHi
-	movwf	Servo2ActiveTimerHi
-	return
+	call	S1StartServo
+;
+	call	S2StartServo
+;
+	call	SetLED2_OFF
+	call	SetLED3_OFF
 ;
 ;=========================================================================================
 ;
-MainLoop	CLRWDT
-	MOVLB	0	;Bank 0
+MainLoop	movlb	0	;Bank 0
+;
+	movf	State,F
+	SKPZ		;State=0?
+	bra	ML_SkipBtns
 ;
 ; Handle Inc/Dec buttons
 	movf	Timer4Lo,W
@@ -893,15 +913,427 @@ ML_Btns_Save	btfsc	DataChangedFlag
 	bcf	DataChangedFlag
 ML_Btns_End:
 ;
+	call	ConfigLEDs
+;
 ;-------------------------
 ;
-	call	SetDestServo1
+ML_SkipBtns	movf	State,F
+	SKPZ		;State=0?
+	call	DoStateN	; No
+;
+	movf	State,F
+	SKPNZ		;State=0?
+	call	SetDestServo	; Yes
+;
 	call	MoveServo1
-	call	SetDestServo2
+;
 	call	MoveServo2
 ;
-
 	goto	MainLoop
+;
+;-------------------------
+; Handle State>0
+DoStateN	movf	State2,W
+	SKPZ
+	call	HandleState2
+;
+	movlw	1
+	subwf	State,W
+	SKPZ		;State=1?
+	bra	TryState2	; No
+;
+;State 1, Start 1s Blink
+	movlw	.100
+	movwf	LED_Blinks
+	movlw	0x01	;constant ON
+	movwf	LED_Time
+;State1_End
+	bra	DoNextState
+;-----------------------------
+TryState2	movlw	2
+	subwf	State,W
+	SKPZ		;State=2?
+	bra	TryState3	; No
+;
+;State 2, Wait for 1s Blink to finish, Start 1s wait
+	movf	LED_Blinks,W
+	SKPZ		;Done?
+State2_Waiting	return		; No
+;
+; Wait for servos to be in position and done w/ move time
+;
+	btfss	S1InPosition
+	bra	State2_Waiting
+	btfss	S2InPosition
+	bra	State2_Waiting
+	movf	Servo1MoveTimerLo,W
+	iorwf	Servo1MoveTimerHi,W
+	SKPZ
+	bra	State2_Waiting
+	movf	Servo2MoveTimerLo,W
+	iorwf	Servo2MoveTimerHi,W
+	SKPZ
+	bra	State2_Waiting
+;
+	movlw	.100	; Yes, Wail 1s
+	movwf	Timer1Lo
+	clrf	Timer1Hi
+;State2_End
+; It has been 3s, servos should be at position 1, get servo idle current
+;
+	bra	DoNextState
+;----------------------------
+TryState3	movlw	3
+	subwf	State,W
+	SKPZ		;State=3?
+	bra	TryState4	; No
+;
+;State 3, Wait for timer, Start Batt Volt Blinks
+	movf	Timer1Lo,W
+	iorwf	Timer1Hi,W
+	SKPZ		;Timer1=0?
+	return		; No
+;
+	call	BlinkBattVolts	;Read battery voltage
+;
+	btfss	BattV_OK	;Batt volts OK?
+	bra	State3_BlinkError	; No
+; Battery voltage is OK
+	movlb	2	;bank 2
+	bcf	ContEnable1	;Enable continuity
+	bcf	ContEnable2	;Enable continuity
+	movlb	0	;bank 0
+;
+	movlw	1
+	movwf	State2	;Start servo current test
+;
+;State3_End
+	bra	DoNextState
+;
+ErrorTime	EQU	.500	;5 seconds
+;
+; Blink error for 5 seconds
+State3_BlinkError	movlw	LEDErrorTime
+	MOVWF	LED_Time
+	movlw	0xFF
+	movwf	LED_Blinks
+;
+	movlw	low ErrorTime
+	movwf	Timer1Lo
+	movlw	high ErrorTime
+	movwf	Timer1Hi
+	movlw	0x07
+	movwf	State
+	return
+;
+;------------------------------
+TryState4	movlw	4
+	subwf	State,W
+	SKPZ		;State=4?
+	bra	TryState5	; No
+;
+;State 4, Wait for Blinks to finish, start 1s deley
+	movf	LED_Blinks,W
+	SKPZ		;LED_Blinks=0?
+	return		; No
+;
+	movlw	.100	; Yes, Wail 1s
+	movwf	Timer1Lo
+	clrf	Timer1Hi		
+;State4_End	
+	bra	DoNextState
+;
+;----------------------------
+TryState5	movlw	5
+	subwf	State,W
+	SKPZ		;State=5?
+	bra	TryState6	; No
+;
+;State 5 Wait for 1s Delay to end, Start 1s Blink
+	movf	Timer1Lo,W
+	iorwf	Timer1Hi,W
+	SKPZ		;Timer1=0?
+	return		; No
+;
+	movlw	.100
+	movwf	LED_Blinks
+	movlw	0x01	;constant ON
+	movwf	LED_Time
+;State5_End
+	bra	DoNextState
+;
+;-----------------------------
+TryState6	movlw	6
+	subwf	State,W
+	SKPZ		;State=6?
+	bra	TryState7	; No
+;
+;State 6 Wait for 1s Blink to end, Start 1s delay
+	movf	LED_Blinks,W
+	SKPZ		;LED_Blinks=0?
+	return		; No
+;
+	movlw	.100	; Yes, Wail 1s
+	movwf	Timer1Lo
+	clrf	Timer1Hi		
+;State6_End	
+	bra	DoNextState
+;
+;----------------------------
+TryState7	movlw	7
+	subwf	State,W
+	SKPZ		;State=7?
+	bra	TryState8	; No
+;
+;State 7 Wait for 1s Delay to end
+	movf	Timer1Lo,W
+	iorwf	Timer1Hi,W
+	SKPZ		;Timer1=0?
+	return		; No
+;
+; Wait for State2=0
+	movf	State2,W
+	SKPZ
+	return
+;
+;State7_End
+; normal system blinks
+	MOVLW	LEDTIME
+	MOVWF	LED_Time
+	movlw	0xFF
+	movwf	LED_Blinks
+;
+; Last State=LastState+1 so we're done
+TryState8:
+LastState	clrf	State
+	return
+;
+DoNextState	incf	State,F	
+	return
+;
+;========================================================================================
+; Servo current testing
+;  Wiggle the servos while looking at the current
+;
+SmallServoMove	EQU	.100
+MinPeakCurrent	EQU	.20
+;
+;
+HandleState2	movlw	1
+	subwf	State2,W
+	SKPZ		;State2=1?
+	bra	HandleState2_2	; No
+;
+	call	GetIdleCurrent
+	call	ClearPeakCurrent
+;
+; Move Servo1 to Position1+100
+	movlw	SmallServoMove
+	addwf	S1Position1,W
+	movwf	S1Dest
+	clrw
+	addwfc	S1Position1+1,W
+	movwf	S1Dest+1
+	bcf	S1InPosition
+	bcf	S1CurPosIsDest
+;
+DoNextState2	incf	State2,F
+	return
+;
+;-------------------------------
+HandleState2_2	movlw	2
+	subwf	State2,W
+	SKPZ		;State2=2?
+	bra	HandleState2_3	; No
+;
+	call	GetPeakCurrect
+;
+; wait for servo to finish moving
+	btfss	S1CurPosIsDest	;Move done?
+	return		; No
+;
+; Move Servo1 to Position1-100
+	movlw	SmallServoMove
+	subwf	S1Position1,W
+	movwf	S1Dest
+	clrw
+	subwfb	S1Position1+1,W
+	movwf	S1Dest+1
+	bcf	S1InPosition
+	bcf	S1CurPosIsDest
+;
+	bra	DoNextState2
+;------------------------------
+HandleState2_3	movlw	3
+	subwf	State2,W
+	SKPZ		;State2=3?
+	bra	HandleState2_4	; No
+;
+	call	GetPeakCurrect
+;
+; wait for servo to finish moving
+	btfss	S1CurPosIsDest	;Move done?
+	return		; No
+;
+; Move Servo1 to Position1
+	movf	S1Position1,W
+	movwf	S1Dest
+	movf	S1Position1+1,W
+	movwf	S1Dest+1
+	bcf	S1InPosition
+	bcf	S1CurPosIsDest
+;
+	bra	DoNextState2
+;----------------------------
+HandleState2_4	movlw	4
+	subwf	State2,W
+	SKPZ		;State2=4?
+	bra	HandleState2_5
+;
+	call	GetPeakCurrect
+;
+; wait for servo to finish moving
+	btfss	S1InPosition	;Move done and servo off?
+	return		; No
+;
+; Is peak current > minimum (10)?
+	movlb	1	;bank 1
+	movf	PeakCurrent+1,W
+	SKPZ		;Current>255?
+	bra	HandleState2_4_1
+	movlw	MinPeakCurrent
+	subwf	PeakCurrent,W
+	SKPB		;Current<MinPeakCurrent?
+	bra	HandleState2_4_1	; No, Current>=MinPeakCurrent
+	movlb	0	;bank 0, Yes, no servo found
+	bra	DoNextState2
+;
+HandleState2_4_1	movlb	0	;bank 0
+	bsf	S1Found	;Servo is attached
+	bra	DoNextState2
+;---------------------------
+HandleState2_5
+;
+	
+;	bsf	S2Found
+	clrf	State2
+;
+	return
+;
+;========================================================================================
+;----------------------------------------------------------------------------------------
+;========================================================================================
+;
+BlinkBattVolts	movlb	0	;bank 0
+	bcf	BattV_OK
+; Get batt ADC
+	movlb	1	;bank 1
+	bsf	AN0_Semaphore
+	movf	AN0_DataL,W
+	movwf	Param7C
+	movf	AN0_DataH,W
+	movwf	Param7D
+	bcf	AN0_Semaphore
+	movlb	0	;bank 0
+;
+	movlw	MinBattVolts
+	subwf	Param7C,W	;ADC-MinBattVolts
+	movlw	high MinBattVolts
+	subwfb	Param7D,W
+	SKPB		:ADC<MinBattVolts?
+	bsf	BattV_OK	; No
+;
+; devide by 32, should be 35.8
+	lsrf	Param7D,F
+	rrf	Param7C,F
+	lsrf	Param7D,F
+	rrf	Param7C,F
+	lsrf	Param7D,F
+	rrf	Param7C,F
+	lsrf	Param7D,F
+	rrf	Param7C,F
+	lsrf	Param7D,F
+	rrf	Param7C,F
+;
+	movlw	.50	; 1/2 second
+	movwf	LED_Time
+	movf	Param7C,W
+	movwf	LED_Blinks	; Blink battery voltage, range 6..11
+	return
+;
+;
+;========================================================================================
+;
+ConfigLEDs	movlb	0	;bank 0
+; 3 states: Off=no servo detected, 1 flash=Pos1, On=Pos2 
+;if pos2 set LED ON
+	btfss	LED2Flag
+	bra	ML_LED2_NotOn
+	call	SetLED2_ON
+	bra	ML_LED2_End
+;
+ML_LED2_NotOn	btfsc	S1Found
+	bra	ML_LED2_Flash
+	call	SetLED2_OFF
+	bra	ML_LED2_End
+;
+ML_LED2_Flash	movlw	1
+	call	SetLED2_W_Flashes
+ML_LED2_End:
+;
+; if pos2 set LED ON
+	btfss	LED3Flag
+	bra	ML_LED3_NotOn
+	call	SetLED3_ON
+	bra	ML_LED3_End
+;
+ML_LED3_NotOn	btfsc	S2Found
+	bra	ML_LED3_Flash
+	call	SetLED3_OFF
+	bra	ML_LED3_End
+;
+ML_LED3_Flash	movlw	1
+	call	SetLED3_W_Flashes
+ML_LED3_End:
+	return
+;
+;----------------------------------------------------------------------------------------
+; Set routines for LED2/LED3
+SetLED2_OFF	movlw	0
+;
+SetLED2_W_Flashes	movlb	0	;bank0
+	andlw	0x03	;Limit to 0..3 flashes
+	movwf	LED2_Flashes
+	movlw	LEDTIME	;1s
+	movwf	LED2_PeriodTime
+	movlw	LEDFlashTime	;0.1s
+	movwf	LED2_FlashTime
+	return
+;
+SetLED2_ON	movlb	0	;bank 0
+	movlw	0x01
+	movwf	LED2_Flashes
+	movwf	LED2_PeriodTime
+	movwf	LED2_FlashTime
+	return
+;
+SetLED3_OFF	movlw	0
+;
+SetLED3_W_Flashes	movlb	0	;bank0
+	andlw	0x03	;Limit to 0..3 flashes
+	movwf	LED3_Flashes
+	movlw	LEDTIME
+	movwf	LED3_PeriodTime
+	movlw	LEDFlashTime
+	movwf	LED3_FlashTime
+	return
+;
+SetLED3_ON	movlb	0	;bank 0
+	movlw	0x01
+	movwf	LED3_Flashes
+	movwf	LED3_PeriodTime
+	movwf	LED3_FlashTime
+	return
 ;
 ;========================================================================================
 ; Move Servo1 CurPos toward Dest
@@ -918,19 +1350,18 @@ MoveServo1	movlb	0	;Bank 0
 	subwfb	S1CurPos+1,W
 	iorwf	Param78,F
 	SKPZ		;Dest == CurPos?
-	bra	MS1_1
+	bra	MS1_1	; No
+	bsf	S1CurPosIsDest
 	movf	Servo1MoveTimerLo,W
 	iorwf	Servo1MoveTimerHi,W
-	movlb	5	;Bank 5
 	SKPNZ
-	bsf	S1InPosition
+	bsf	S1InPosition	
 	bra	MS1_Move_It_Now	; Yes
 ;
 MS1_1	movlw	Low ServoMoveTime
 	movwf	Servo1MoveTimerLo
 	movlw	High ServoMoveTime
 	movwf	Servo1MoveTimerHi
-	movlb	5	;Bank 5
 	bcf	S1InPosition
 ;
 	movlb	0	;Bank 0
@@ -1006,9 +1437,9 @@ MoveServo2	movlb	0	;Bank 0
 	iorwf	Param78,F
 	SKPZ		;Dest == CurPos?
 	bra	MS2_1
+	bsf	S2CurPosIsDest
 	movf	Servo2MoveTimerLo,W
 	iorwf	Servo2MoveTimerHi,W
-	movlb	5	;Bank 5
 	SKPNZ
 	bsf	S2InPosition
 	bra	MS2_Move_It_Now	; Yes
@@ -1017,7 +1448,6 @@ MS2_1	movlw	Low ServoMoveTime
 	movwf	Servo2MoveTimerLo
 	movlw	High ServoMoveTime
 	movwf	Servo2MoveTimerHi
-	movlb	5	;Bank 5
 	bcf	S2InPosition
 ;
 	movlb	0	;Bank 0
@@ -1080,22 +1510,29 @@ MS2_End	return
 ;========================================================================================
 ; Set Dest for Servo 1
 ;
-SetDestServo1	btfss	NewSWData	;10mS interval passed?
-	bra	SDS1_End	; No
+; w/ 50mS debounce
+;  If SnCmdInputBit is active set SnSMRevFlag else clear SnSMRevFlag
+;
+SetDestServo	movlb	0	;bank 0
+	btfss	NewSWData	;10mS interval passed?
+	return		; No, IRQ sets bit 100 times per second
 	bcf	NewSWData
 ;
 	btfsc	S1CmdInputBit	;Contorl signal active?
 	bra	SDS1_CmdNormal	; No
-; debounce, don't change until we've seen the input 5 times
+;
+; debounce, don't change until we've seen the input 5 times, 0.05 seconds
 	movlw	0x05
 	subwf	S1CmdDebounce,W
 	SKPZ		;5 times?
 	bra	SDS1_Rev_Debounce	; No
 ;
 	movlb	5	;Bank5
-	bsf	S1SMRevFlag
+	bsf	S1SMRevFlag	; move to position 2
 	movlb	0	;Bank0
 	bsf	LED2Flag
+	bsf	S1Active	;Buttons are active for servo1
+	bcf	S2Active
 	movlw	Low ActivationTime
 	movwf	Servo1ActiveTimerLo
 	movlw	High ActivationTime
@@ -1117,7 +1554,7 @@ SDS1_CmdNormal	movf	S1CmdDebounce,F
 ;
 	if HoldOpen=0
 	movlb	5	;Bank5
-	bcf	S1SMRevFlag
+	bcf	S1SMRevFlag	; Set position 1 as Dest
 	movlb	0	;Bank0
 	endif
 ;
@@ -1127,19 +1564,20 @@ SDS1_CmdNormal	movf	S1CmdDebounce,F
 SDS1_Norm_Debounce	decf	S1CmdDebounce,F
 	bra	SDS1_End
 ;
-SDS1_Move_It	goto	S1CopyPosToDest
+SDS1_Move_It	call	S1CopyPosToDest
 ;
-SDS1_End	return
+SDS1_End:
 ;
-;========================================================================================
+;===========================================
 ; Set Dest for Servo 2
 ;
-SetDestServo2	btfss	NewSWData	;10mS interval passed?
-	bra	SDS2_End	; No
-	bcf	NewSWData
+; w/ 50mS debounce
+;  If SnCmdInputBit is active set SnSMRevFlag else clear SnSMRevFlag
+;
 ;
 	btfsc	S2CmdInputBit	;Contorl signal active?
 	bra	SDS2_CmdNormal	; No
+;
 ; debounce, don't change until we've seen the input 5 times
 	movlw	0x05
 	subwf	S2CmdDebounce,W
@@ -1149,7 +1587,9 @@ SetDestServo2	btfss	NewSWData	;10mS interval passed?
 	movlb	5	;Bank5
 	bsf	S2SMRevFlag
 	movlb	0	;Bank0
-	bsf	LED2Flag
+	bsf	LED3Flag
+	bsf	S2Active	;Buttons are active for servo2
+	bcf	S1Active
 	movlw	Low ActivationTime
 	movwf	Servo2ActiveTimerLo
 	movlw	High ActivationTime
@@ -1169,13 +1609,11 @@ SDS2_CmdNormal	movf	S2CmdDebounce,F
 	SKPZ		;Activation time done?
 	bra	SDS2_Move_It	; No
 ;
-	if HoldOpen=0
 	movlb	5	;Bank5
 	bcf	S2SMRevFlag
 	movlb	0	;Bank0
-	endif
 ;
-	bcf	LED2Flag
+	bcf	LED3Flag
 	bra	SDS2_Move_It
 ;
 SDS2_Norm_Debounce	decf	S2CmdDebounce,F
@@ -1209,12 +1647,12 @@ S1Copy7CToSig	movlb	5	;Bank5
 	MOVF	Param7C,W
 	SUBWF	S1SigOutTime,W
 	SKPZ
-	GOTO	S1Copy7CToSig_1
+	bra	S1Copy7CToSig_1
 	MOVF	Param7D,W
 	SUBWF	S1SigOutTimeH,W
 	movlb	0	;Bank0
-	SKPNZ
-	Return
+	SKPNZ		;Param7D:Param7D = S1SigOutTime?
+	return		; Yes
 ;
 ;SigOutTimeH:SigOutTime = Param7D:Param7C
 S1Copy7CToSig_1	bcf	INTCON,GIE
@@ -1229,7 +1667,7 @@ S1Copy7CToSig_1	bcf	INTCON,GIE
 	bsf	INTCON,GIE
 ;
 	movlb	0	;Bank0
-	RETURN
+	return
 ;
 ;========================================================================================
 ; Param7D:Param7C >> S2SigOutTimeH:S2SigOutTime
@@ -1244,12 +1682,12 @@ S2Copy7CToSig	movlb	5	;Bank5
 	MOVF	Param7C,W
 	SUBWF	S2SigOutTime,W
 	SKPZ
-	GOTO	S2Copy7CToSig_1
+	bra	S2Copy7CToSig_1
 	MOVF	Param7D,W
 	SUBWF	S2SigOutTimeH,W
 	movlb	0	;Bank0
 	SKPNZ
-	Return
+	return
 ;
 ;SigOutTimeH:SigOutTime = Param7D:Param7C
 S2Copy7CToSig_1	bcf	INTCON,GIE
@@ -1264,7 +1702,7 @@ S2Copy7CToSig_1	bcf	INTCON,GIE
 	bsf	INTCON,GIE
 ;
 	movlb	0	;Bank0
-	RETURN
+	return
 ;
 ;=========================================================================
 ; Copy Position to Destination for Servo 1
@@ -1291,7 +1729,8 @@ S1CopyPos2ToDest	movlb	0	;Bank0
 ; Copy Temp (Param7C/Param7D) to Destination for any Servo 
 ; Servo 1 has priority
 ;
-CopyTempToDest	btfsc	S1Active
+CopyTempToDest	movlb	0	;Bank 0
+	btfsc	S1Active
 	bra	S1CopyTempToDest
 	btfsc	S2Active
 	bra	S2CopyTempToDest
@@ -1444,61 +1883,79 @@ S2CopyPos2ToDest	movlb	0	;Bank0
 ;
 ;=========================================================================================
 ;=========================================================================================
+; 
+GetIdleCurrent	movlb	1	;Bank 1
+	bsf	AN1_Semaphore
+	movf	AN1_DataL,W
+	movwf	IDleCurrent
+	movf	AN1_DataH,W
+	movwf	IDleCurrent+1
+	bcf	AN1_Semaphore
+	movlb	0	;Bank 0
+	return
+;
+;=========================================================================================
+;
+ClearPeakCurrent	movlb	1	;Bank 1
+	clrf	PeakCurrent
+	clrf	PeakCurrent+1
+	movlb	0	;Bank 0
+	return
+;
+;=========================================================================================
+; if AN1_Data-IDleCurrent>PeakCurrent then PeakCurrent=AN1_Data-IDleCurrent
+;
+GetPeakCurrect	movlb	1	;Bank 1
+	bsf	AN1_Semaphore
+;
+;Param7C:Param7D := AN1_Data - IDleCurrent
+	movf	IDleCurrent,W
+	subwf	AN1_DataL,W
+	movwf	Param7C
+	movf	IDleCurrent+1,W
+	subwfb	AN1_DataH,W
+	movwf	Param7D
+	btfsc	Param7D,7	;Is negative, current < IdleCurrent?
+	bra	GetPeakCurrect_1	; Yes, current is less than idle current
+;
+	movf	Param7C,W
+	subwf	PeakCurrent,W
+	movf	Param7D,W
+	subwfb	PeakCurrent+1,W
+	SKPB		;New > Old?
+	bra	GetPeakCurrect_1	; No
+;
+; PeakCurrent := new value
+	movf	Param7C,W
+	movwf	PeakCurrent
+	movf	Param7D,W
+	movwf	PeakCurrent+1
+;
+GetPeakCurrect_1	bcf	AN1_Semaphore
+	movlb	0	;Bank 0
+	return
+;	
+;=========================================================================================
 ; Read AN0, Must call ReadAN0_ColdStart first
 ; Exit: 10bit analog in 7D:7C
 ;
 ADCON1Value	equ	b'10100000'	;Right Just, Fosc/32, Vss, Vdd
 ADCON1_AN0	equ	b'00000001'	;AN0, ADC Enabled
-ADCON1_AN0	equ	b'00000101'	;AN1, ADC Enabled
+ADCON1_AN1	equ	b'00000101'	;AN1, ADC Enabled
 ;
-ReadAN0	CLRF	Param7C
-	CLRF	Param7D
-	MOVLB	1	;bank 1
-	BTFSS	ADCON0,ADON	;Is the Analog input ON?
-	call	ReadAN0_ColdStart	; No, go start it
-;
-ReadAN0_L1	BTFSC	ADCON0,GO_NOT_DONE	;Conversion done?
-	BRA	ReadAN0_L1	; No
-;
-	MOVF	ADRESH,W
-	MOVWF	Param7D
-	MOVF	ADRESL,W
-	MOVWF	Param7C
-;
-	BSF	ADCON0,ADGO	;Start next conversion.
-	MOVLB	0	;bank 0
-	RETURN
-;
-;------------------------
-; Read AN1, Must call ReadAN1_ColdStart first
-; Exit: 10bit analog in 7D:7C
-;
-ReadAN1	CLRF	Param7C
-	CLRF	Param7D
-	MOVLB	1	;bank 1
-	BTFSS	ADCON0,ADON	;Is the Analog input ON?
-	call	ReadAN1_ColdStart	; No, go start it
-;
-ReadAN1_L1	BTFSC	ADCON0,GO_NOT_DONE	;Conversion done?
-	BRA	ReadAN1_L1	; No
-;
-	MOVF	ADRESH,W
-	MOVWF	Param7D
-	MOVF	ADRESL,W
-	MOVWF	Param7C
-;
-	BSF	ADCON0,ADGO	;Start next conversion.
-	MOVLB	0	;bank 0
-	RETURN
+Init_ADC	movlb	1	;bank 1
+	bsf	PIE1,ADIE
+	movlb	0	;bank 0
+	bcf	PIR1,ADIF
 ;
 ;------------------------
 ;
-ReadAN0_ColdStart	MOVLB	ADCON1	;bank 1
+	movlb	1	;bank 1
 	MOVLW	ADCON1Value
 	MOVWF	ADCON1
 	MOVLW	ADCON1_AN0	;Select AN0
 	MOVWF	ADCON0
-ReadAN0_ColdStart_1	nop		;4uS delay
+	nop		;4uS delay
 	nop
 	nop
 	nop
@@ -1507,114 +1964,161 @@ ReadAN0_ColdStart_1	nop		;4uS delay
 	nop
 	nop
 	BSF	ADCON0,ADGO
-ReadAN0_Rtn	MOVLB	0	;bank 0
+	movlb	0	;bank 0
 	Return
 ;
-;-------------------------
+;---------------------------
+; Interupt service routine
 ;
-ReadAN1_ColdStart	MOVLB	ADCON1	;bank 1
-	MOVLW	ADCON1Value
-	MOVWF	ADCON1
-	MOVLW	ADCON1_AN1	;Select AN0
-	MOVWF	ADCON0
-	bra	ReadAN0_ColdStart_1
+IRQ_ADC	movlb	0	;bank 0
+	bcf	PIR1,ADIF
+;
+	movlb	1	;bank 1
+	btfsc	ADCON0,2	;AN0 is active?
+	bra	IRQ_ADC_AN1	; No, go handle AN1
+;
+; AN0 just finished
+	MOVF	ADRESH,W
+	MOVWF	AN0_RawH
+	MOVF	ADRESL,W
+	MOVWF	AN0_RawL
+	bsf	AN0_NewRawData
+	movlw	ADCON1_AN1	;Sample and start conversion of AN1
+	movwf	ADCON0
+	bra	SampleTimer
+
+;
+; AN1 just finished
+IRQ_ADC_AN1	MOVF	ADRESH,W
+	MOVWF	AN1_RawH
+	MOVF	ADRESL,W
+	MOVWF	AN1_RawL
+	bsf	AN1_NewRawData
+	movlw	ADCON1_AN0	;Sample and start conversion of AN0
+	movwf	ADCON0
+;
+SampleTimer	nop		;4uS delay
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	bsf	ADCON0,ADGO
+;
+UpdateANData	movlb	1	;bank 1
+	btfsc	AN0_Semaphore
+	bra	UpdateANData_1
+	btfss	AN0_NewRawData
+	bra	UpdateANData_1
+	movf	AN0_RawL,W
+	movwf	AN0_DataL
+	movf	AN0_RawH,W
+	movwf	AN0_DataH
+	bcf	AN0_NewRawData
+	bsf	AN0_NewData
+;
+UpdateANData_1	btfsc	AN1_Semaphore
+	bra	UpdateANData_End
+	btfss	AN1_NewRawData
+	bra	UpdateANData_End
+	movf	AN1_RawL,W
+	movwf	AN1_DataL
+	movf	AN1_RawH,W
+	movwf	AN1_DataH
+	bcf	AN1_NewRawData
+	bsf	AN1_NewData
+;	
+UpdateANData_End:
+;
+	goto	IRQ_ADC_Return
 ;
 ;=========================================================================================
 ;=========================================================================================
 ; Set CCP1 to go high in 0x100 clocks
 ;
-S1StartServo	MOVLB	0	;bank 0
-	BTFSS	S1ServoOff
-	RETURN
+S1StartServo	movlb	5	;bank 5
+	BTFSS	S1ServoOff	;Servo is active?
+	bra	S1StartServo_End	; yes, don't start it again
 	BCF	S1ServoOff
 ;
-S1SS_Start_Loop	movf	Timer4Lo,F
-	SKPZ
-	bra	S1SS_Start_Loop
-;
 ; Initialize to normal position
-S1SS_CmdNormal	movlb	5	;Bank 5
-	bcf	S1SMRevFlag
+	bcf	S1SMRevFlag	;forward
 	movlb	0	;Bank 0
 	bcf	LED2Flag
 ;
-S1SS_Move_It	call	S1CopyPosToDest
+	call	S1CopyPosToDest
 	call	S1SetDestAsCur
-	CALL	S1Copy7CToSig
+	call	S1Copy7CToSig
 ;
-	MOVLW	0x00	;start in 0x100 clocks
-	MOVWF	TMR1L
-	MOVLW	0xFF
-	MOVWF	TMR1H
+	movlb	0	;Bank 0	
+	movlw	.100	;start in 0x100 clocks
+	addwf	TMR1L,W
+	movlb	0x05                   ;Bank 5
+	movwf	CCPR1L
+	movlb	0	;Bank 0	
+	movlw	0
+	addwfc	TMR1H,W
+	movlb	0x05                   ;Bank 5
+	movwf	CCPR1H
 ;
-	MOVLB	0x05                   ;Bank 5
-	CLRF	CCPR1H
-	CLRF	CCPR1L
 	MOVLW	CCPnCON_Set
 	MOVWF	CCP1CON	;go high on match
-	MOVLB	0x00	;Bank 0
-	movlw	low .300	;Do nothing for 3 seconds
-	movwf	Timer4Lo
-	movlw	high .300
-	movwf	Timer4Hi
+	movlb	0	;Bank 0
 	movlw	Low ServoMoveTime	;At power up move to commanded position
 	movwf	Servo1MoveTimerLo
 	movlw	High ServoMoveTime
 	movwf	Servo1MoveTimerHi
-	MOVLB	0x05                   ;Bank 5
 	bcf	S1InPosition
-	MOVLB	0x00	;Bank 0
+;
+S1StartServo_End	movlb	0x00	;Bank 0
 	RETURN
 ;
 ;=========================================================================================
 ; Set CCP1 to go high in 0x100 clocks
 ;
-S2StartServo	MOVLB	0	;bank 0
-	BTFSS	S2ServoOff
-	RETURN
+S2StartServo	movlb	5	;bank 5
+	BTFSS	S2ServoOff	;Servo is active?
+	bra	S2StartServo_End	; yes, don't start it again
 	BCF	S2ServoOff
 ;
-S2SS_Start_Loop	movf	Timer4Lo,F
-	SKPZ
-	bra	S2SS_Start_Loop
-;
 ; Initialize to normal position
-S2SS_CmdNormal	movlb	5	;Bank 5
 	bcf	S2SMRevFlag
 	movlb	0	;Bank 0
 	bcf	LED3Flag
 ;
-S2SS_Move_It	call	S2CopyPosToDest
+	call	S2CopyPosToDest
 	call	S2SetDestAsCur
-	CALL	S2Copy7CToSig
+	call	S2Copy7CToSig
 ;
-	MOVLW	0x00	;start in 0x100 clocks
-	MOVWF	TMR1L
-	MOVLW	0xFF
-	MOVWF	TMR1H
+	movlb	0	;Bank 0	
+	movlw	.100	;start in 0x100 clocks
+	addwf	TMR1L,W
+	movlb	0x05                   ;Bank 5
+	movwf	CCPR2L
+	movlb	0	;Bank 0	
+	movlw	0
+	addwfc	TMR1H,W
+	movlb	0x05                   ;Bank 5
+	movwf	CCPR2H
 ;
-	MOVLB	0x05                   ;Bank 5
-	CLRF	CCPR2H
-	CLRF	CCPR2L
 	MOVLW	CCPnCON_Set
 	MOVWF	CCP2CON	;go high on match
-	MOVLB	0x00	;Bank 0
-	movlw	low .300	;Do nothing for 3 seconds
-	movwf	Timer4Lo
-	movlw	high .300
-	movwf	Timer4Hi
+	movlb	0x00	;Bank 0
 	movlw	Low ServoMoveTime	;At power up move to commanded position
 	movwf	Servo2MoveTimerLo
 	movlw	High ServoMoveTime
 	movwf	Servo2MoveTimerHi
-	MOVLB	0x05                   ;Bank 5
 	bcf	S2InPosition
-	MOVLB	0x00	;Bank 0
+;
+S2StartServo_End	movlb	0x00	;Bank 0
 	RETURN
 ;
 ;=========================================================================================
 ;
-S1SetMiddlePosition	MOVLW	LOW kMidPulseWidth
+S1SetMiddlePosition	movlb	0	;bank 0
+	MOVLW	LOW kMidPulseWidth
 	MOVWF	Param7C
 	movwf	S1Dest
 	movwf	S1CurPos
@@ -1626,7 +2130,8 @@ S1SetMiddlePosition	MOVLW	LOW kMidPulseWidth
 ;
 ;=========================================================================================
 ;
-S2SetMiddlePosition	MOVLW	LOW kMidPulseWidth
+S2SetMiddlePosition	movlb	0	;bank 0
+	MOVLW	LOW kMidPulseWidth
 	MOVWF	Param7C
 	movwf	S2Dest
 	movwf	S2CurPos
@@ -1638,7 +2143,8 @@ S2SetMiddlePosition	MOVLW	LOW kMidPulseWidth
 ;
 ;=========================================================================================
 ;
-S1SetDestAsCur	movf	S1Dest,W
+S1SetDestAsCur	movlb	0	;bank 0
+	movf	S1Dest,W
 	MOVWF	Param7C
 	movwf	S1CurPos
 	movf	S1Dest+1,W
@@ -1648,7 +2154,8 @@ S1SetDestAsCur	movf	S1Dest,W
 ;
 ;=========================================================================================
 ;
-S2SetDestAsCur	movf	S2Dest,W
+S2SetDestAsCur	movlb	0	;bank 0
+	movf	S2Dest,W
 	MOVWF	Param7C
 	movwf	S2CurPos
 	movf	S2Dest+1,W
@@ -1665,21 +2172,21 @@ S2SetDestAsCur	movf	S2Dest,W
 ClampInt	MOVLW	high kMaxPulseWidth
 	SUBWF	Param7D,W	;7D-kMaxPulseWidth
 	SKPNB		;7D<Max?
-	GOTO	ClampInt_1	; Yes
+	bra	ClampInt_1	; Yes
 	SKPZ		;7D=Max?
-	GOTO	ClampInt_tooHigh	; No, its greater.
+	bra	ClampInt_tooHigh	; No, its greater.
 	MOVLW	low kMaxPulseWidth	; Yes, MSB was equal check LSB
 	SUBWF	Param7C,W	;7C-kMaxPulseWidth
 	SKPNZ		;=kMaxPulseWidth
 	RETURN		;Yes
 	SKPB		;7C<Max?
-	GOTO	ClampInt_tooHigh	; No
+	bra	ClampInt_tooHigh	; No
 	RETURN		; Yes
 ;
 ClampInt_1	MOVLW	high kMinPulseWidth
 	SUBWF	Param7D,W	;7D-kMinPulseWidth
 	SKPNB		;7D<Min?
-	GOTO	ClampInt_tooLow	; Yes
+	bra	ClampInt_tooLow	; Yes
 	SKPZ		;=Min?
 	RETURN		; No, 7D>kMinPulseWidth
 	MOVLW	low kMinPulseWidth	; Yes, MSB is a match
@@ -1709,13 +2216,13 @@ Param7D_LE_Param79	CLRF	Param77	;default to >
 	MOVF	Param79,W
 	SUBWF	Param7D,W	;Param7D-Param79
 	SKPNB		;Param7D<Param79?
-	GOTO	SetTrue	; Yes
+	bra	SetTrue	; Yes
 	SKPZ		;Param7D>Param79?
 	RETURN		; Yes
 	MOVF	Param78,W	; No, MSB is a match
 	SUBWF	Param7C,W	;Param7C-Param78
 	SKPNB		;Param7C<Param78?
-	GOTO	SetTrue	; Yes
+	bra	SetTrue	; Yes
 	SKPZ		;LSBs then same?
 	RETURN		; No
 ;
@@ -1774,12 +2281,12 @@ Param7D_GE_Param79	CLRF	Param77	;default to <
 	SKPNB		;Param7D<Param79?
 	RETURN		; Yes
 	SKPZ		;Param7D>Param79?
-	GOTO	SetTrue	; Yes
+	goto	SetTrue	; Yes
 Param7D_GE_Param79_1	MOVF	Param78,W	; No, MSB is a match
 	SUBWF	Param7C,W	;Param7C-Param78
 	SKPNB		;Param7C<Param78?
 	RETURN		; Yes
-	GOTO	SetTrue	; No
+	goto	SetTrue	; No
 ;
 ;======================================================================================
 ;

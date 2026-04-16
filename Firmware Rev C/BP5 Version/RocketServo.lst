@@ -136,8 +136,8 @@ RocketServo.asm                                                       Page: 1
 00122 0000 0BB8 	kMidPulseWidth	EQU	d'3000'	;1500uS
 00123 0000 1388 	kMaxPulseWidth	EQU	d'5000'	;2500uS
 00124 0000 		if BP3Hold
-00125 0000 03E8 	kDefaultPosition2	EQU	d'1000'	;500uS Locked
-00126 0000 1388 	kDefaultPosition1	EQU	d'5000'	;2500uS Open
+00125 0000 03E8 	kDefaultPosition2	EQU	d'1000'	;500uS Open
+00126 0000 1388 	kDefaultPosition1	EQU	d'5000'	;2500uS Locked
 00127 0000 0001 	HoldOpen	EQU	1
 00128 0000 		else
 00132 0000 		endif
