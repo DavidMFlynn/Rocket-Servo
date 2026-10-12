@@ -4035,6 +4035,16 @@
 			(embedded_fonts no)
 		)
 	)
+	(text "8.79V"
+		(exclude_from_sim no)
+		(at 145.288 28.702 0)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+		)
+		(uuid "05398ba4-2333-47e8-a1e5-61549ed9d573")
+	)
 	(text "+9\nGnd"
 		(exclude_from_sim no)
 		(at 20.574 45.212 0)
@@ -4046,9 +4056,9 @@
 		)
 		(uuid "0d585116-a8f2-4f11-8995-65a809d545bb")
 	)
-	(text "R1,R4        470Ω\nR2,R3,R5,R6,R11,R12,R16,R22,R23 1.0KΩ\nR7,R8,R10   10KΩ\nR9,R17,R18   47KΩ\nR13           2.2KΩ\nR14           100KΩ\nR15           270Ω\nR19,R20       220Ω\nR21           0.05Ω\nD2  SMB 2A\nD1,D3,D4  LED SMD1206\nC1,C2,C3,C4,C6,C7,C8  0.1uf 0805\nC5  33uf 25V\nC9  220uf 16V\nP1,P2,P3,LED1  2 pin sip pin header\nP4,P5    3 pin sip pin header\nU5  PID12F1847-I/SO 18SOIC\nU7  L7806 DPAK\nU8  ua78L05\nU1,U2,U3,U4 CPC1017N \nSW1,SW2 KXT341 LHS\n"
+	(text "R1,R4        470Ω\nR2,R3,R5,R6,R11,R12,R16,R22,R23 1.0KΩ\nR7,R8,R10   10KΩ\nR9,R17,R18   47KΩ\nR13           2.2KΩ\nR14           100KΩ\nR15           270Ω\nR19,R20       220Ω\nR21           0.05Ω 1% 2512 3W\nD2  SMB 2A\nD1,D3,D4  LED SMD1206\nC1,C2,C3,C4,C6,C7,C8  0.1uf 0805\nC5  33uf 25V\nC9  220uf 16V\nP1,P2,P3,LED1  2 pin sip pin header\nP4,P5    3 pin sip pin header\nU5  PIC16F1847-I/SO 18SOIC\nU6  LM358ADR or LM6132BIM\nU7  L7806 DPAK 6V 1.5A\nU8  ua78L05 5V 100mA\nU1,U2,U3,U4 CPC1017N \nSW1,SW2 KXT341 LHS\nJ1 5 pin header (optional)\nJ2 8 pos screw terminal"
 		(exclude_from_sim no)
-		(at 17.526 194.31 0)
+		(at 15.494 201.168 0)
 		(effects
 			(font
 				(size 1.524 1.524)
@@ -4098,6 +4108,16 @@
 		)
 		(uuid "6229eb43-f18a-4750-abe6-817692e02b96")
 	)
+	(text "Rev. A  Added notes"
+		(exclude_from_sim no)
+		(at 238.76 170.434 0)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+		)
+		(uuid "7ec904a9-412f-4a8b-a00c-c4e122b4b124")
+	)
 	(text "10V>>1.75V"
 		(exclude_from_sim no)
 		(at 155.194 58.166 0)
@@ -4107,6 +4127,16 @@
 			)
 		)
 		(uuid "810b6aa2-a9aa-449d-bd5a-be1394cc1678")
+	)
+	(text "0mA >> 0.003V 1C\n50mA >> 0.104V 21C\n500mA >> 212C"
+		(exclude_from_sim no)
+		(at 179.324 85.852 0)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+		)
+		(uuid "9b615d33-6d64-4bd9-b614-8b9143fb5608")
 	)
 	(text "S\n+\n-"
 		(exclude_from_sim no)
@@ -4119,6 +4149,16 @@
 		)
 		(uuid "9d9a16c8-8e81-4416-b992-3fcc494a5e93")
 	)
+	(text "8.57V"
+		(exclude_from_sim no)
+		(at 178.054 28.956 0)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+		)
+		(uuid "9fbee8db-ef9b-4639-90ef-56ed0d997eba")
+	)
 	(text "LED1 +\nLED1 -"
 		(exclude_from_sim no)
 		(at 21.082 58.928 0)
@@ -4128,6 +4168,26 @@
 			)
 		)
 		(uuid "a84ab83c-f265-4741-abc3-5c2aa0e00fcc")
+	)
+	(text "8.8V >> 1.502V\n7.7V >> 1.32V\n6.7V >> 1.14V"
+		(exclude_from_sim no)
+		(at 169.926 63.754 0)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+		)
+		(uuid "aab5cb5c-611b-4d6c-ba09-b1c79fe55322")
+	)
+	(text "ADC 35.8C/V  6.5V=232C"
+		(exclude_from_sim no)
+		(at 176.784 106.68 0)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+		)
+		(uuid "afcd3ef6-2d0f-432a-8b4f-6350fde0306e")
 	)
 	(text "Trigger1 +\nTrigger1 -"
 		(exclude_from_sim no)
