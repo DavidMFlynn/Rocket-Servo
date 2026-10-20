@@ -1,8 +1,8 @@
 ;====================================================================================================
 ;
 ;   Filename:	RocketServo2.asm
-;   Date:	10/12/2026
-;   File Version:	1.0b2
+;   Date:	10/19/2026
+;   File Version:	1.0b3
 ;
 ;    Author:	David M. Flynn
 ;    E-Mail:	dflynn.oxfordvue@gmail.com
@@ -11,6 +11,7 @@
 ;    RC Servo Activator (2 channel) for high power rocketry uses PIC16F1847
 ;
 ;    History:
+; 1.0b3   10/19/2026   Battery voltage... Error at 7.6 volts, round so 9.2 yields 9 flashes not 10
 ; 1.0b2   10/12/2026   Power up glitch?
 ; 1.0b1   12/20/2025   Copied from RocketServo rev 1.2b1
 ;
@@ -120,7 +121,7 @@ CCPnCON_Clr	EQU	b'00001001'	;Clear output on match
 CCPnCON_Set	EQU	b'00001000'	;Set output on match
 CCPnCON_Int	EQU	b'00001010'
 ;
-MinBattVolts	EQU	d'232'	;V/35.8 * 204.8c/v = 6.5V
+MinBattVolts	EQU	d'270'	;V/5.833 * 204.8c/v = 7.7V
 ;
 ActivationTime	EQU	d'300'	;3 seconds
 kOffsetCtrValue	EQU	d'2047'
@@ -1365,6 +1366,12 @@ BlinkBattVolts	movlb	0	;bank 0
 	subwfb	Param7D,W
 	SKPB		:ADC<MinBattVolts?
 	bsf	BattV_OK	; No
+;
+; subtract 1/2 volt so 8.6V gives 9 flashes not 8.1V
+	movlw	.17
+	subwf	Param7C,F
+	clrw
+	subwfb	Param7D,F
 ;
 ; devide by 32, should be 35.8
 	lsrf	Param7D,F
